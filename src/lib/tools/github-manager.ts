@@ -1,5 +1,3 @@
-import { ApiKeys } from '@/types';
-
 export interface GitHubRepo {
   id: number;
   name: string;

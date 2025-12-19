@@ -510,7 +510,7 @@ export const PreviewManagerWithIframe: React.FC<PreviewManagerWithIframeProps> =
 }) => {
   return (
     <PreviewManager {...props}>
-      {({ previewUrl, status, refresh, restart }) => (
+      {({ previewUrl, status: _status, refresh, restart }) => (
         <div className="flex flex-col h-full">
           {/* Controls */}
           {showControls && (
