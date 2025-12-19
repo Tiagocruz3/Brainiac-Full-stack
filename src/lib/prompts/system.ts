@@ -95,38 +95,37 @@ All generated apps include a complete shadcn/ui component library. **Always impo
 
 ## Available Components
 
-- **Button**: \`import { Button } from '@/components/ui/button'\`
-  - Variants: \`default\`, \`destructive\`, \`outline\`, \`secondary\`, \`ghost\`, \`link\`
-  - Sizes: \`default\`, \`sm\`, \`lg\`, \`icon\`
-  - Example: \`<Button variant="default" size="lg">Click me</Button>\`
+**🚨 CRITICAL: ONLY USE THESE 3 COMPONENTS - NOTHING ELSE!**
 
-- **Input**: \`import { Input } from '@/components/ui/input'\`
-  - Example: \`<Input type="email" placeholder="Email" />\`
+These are the ONLY shadcn/ui components available in the template:
 
-- **Card**: \`import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'\`
-  - Example: \`<Card><CardHeader><CardTitle>Title</CardTitle></CardHeader><CardContent>Content</CardContent></Card>\`
+1. **Button**: \`import { Button } from '@/components/ui/button'\`
+   - Variants: \`default\`, \`destructive\`, \`outline\`, \`secondary\`, \`ghost\`, \`link\`
+   - Sizes: \`default\`, \`sm\`, \`lg\`, \`icon\`
+   - Example: \`<Button variant="default" size="lg">Click me</Button>\`
 
-- **Dialog**: \`import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'\`
-  - Use for modals, confirmations, and forms
-  - Example: \`<Dialog><DialogTrigger><Button>Open</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Title</DialogTitle></DialogHeader>Content here</DialogContent></Dialog>\`
+2. **Input**: \`import { Input } from '@/components/ui/input'\`
+   - Example: \`<Input type="email" placeholder="Email" />\`
 
-- **Dropdown Menu**: \`import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'\`
-  - Use for user menus, actions, and options
-  - Example: \`<DropdownMenu><DropdownMenuTrigger><Button variant="outline">Menu</Button></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuItem>Item 1</DropdownMenuItem></DropdownMenuContent></DropdownMenu>\`
+3. **Card**: \`import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'\`
+   - Example: \`<Card><CardHeader><CardTitle>Title</CardTitle></CardHeader><CardContent>Content</CardContent></Card>\`
 
-- **Toast**: \`import { useToast } from '@/hooks/use-toast'\` and \`import { Toaster } from '@/components/ui/toaster'\`
-  - Use for notifications and feedback
-  - Add \`<Toaster />\` to your App component
-  - Example: \`const { toast } = useToast(); toast({ title: "Success", description: "Action completed!" })\`
+**❌ DO NOT USE THESE (they don't exist in the template):**
+- Dialog / Modal ❌
+- Dropdown Menu ❌  
+- Toast / Toaster ❌
+- Avatar ❌
+- Badge ❌
+- Select ❌
+- Tabs ❌
+- Alert ❌
+- Any other shadcn/ui component ❌
 
-- **Avatar**: \`import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'\`
-  - Use for user profiles and icons
-  - Example: \`<Avatar><AvatarImage src="url" /><AvatarFallback>JD</AvatarFallback></Avatar>\`
-
-- **Badge**: \`import { Badge } from '@/components/ui/badge'\`
-  - Variants: \`default\`, \`secondary\`, \`destructive\`, \`outline\`
-  - Use for tags, status indicators, and labels
-  - Example: \`<Badge variant="secondary">New</Badge>\`
+**If you need these features, build them with custom JSX:**
+- **For modals**: Use conditional rendering with a fixed/absolute positioned div
+- **For notifications**: Use \`alert()\` or a custom notification div  
+- **For badges**: Use \`<span className="px-2 py-1 bg-purple-500 text-white rounded-full text-xs">Badge</span>\`
+- **For dropdowns**: Use \`<select>\` or custom dropdown with state
 
 ## Why Use These Components
 
@@ -141,23 +140,22 @@ All generated apps include a complete shadcn/ui component library. **Always impo
 ### DO ✅
 - \`<Button variant="outline" onClick={handleClick}>Save</Button>\`
 - \`<Input placeholder="Search..." value={search} onChange={handleSearch} />\`
-- \`<Dialog>\` for modals instead of custom modal components
-- \`<DropdownMenu>\` for user menus and action lists
-- \`<Badge>\` for status indicators and tags
-- \`<Avatar>\` for user profiles
-- \`useToast()\` for notifications instead of alert() or custom toasts
-- Import from \`@/components/ui/...\` and \`@/lib/utils\`
+- \`<Card>\` for content sections and containers
+- Import ONLY from: \`@/components/ui/button\`, \`@/components/ui/input\`, \`@/components/ui/card\`, \`@/lib/utils\`
 - Use \`cn()\` utility to merge Tailwind classes when needed
-- Add \`<Toaster />\` to App.tsx when using toast notifications
+- Build custom components with Tailwind when needed
 
-### DON'T ❌
-- \`<button className="px-4 py-2 bg-blue-500...">\` - use Button component
-- \`<input className="border rounded px-3...">\` - use Input component
-- \`<div className="modal...">\` - use Dialog component
-- Custom dropdown implementations - use DropdownMenu
-- \`alert("Success")\` or custom notifications - use toast
-- \`<img className="rounded-full">\` for user images - use Avatar
-- \`<span className="badge...">\` - use Badge component
+### DON'T ❌ (WILL CAUSE BUILD FAILURES!)
+- ❌ \`import { Badge } from '@/components/ui/badge'\` - DOESN'T EXIST!
+- ❌ \`import { Dialog } from '@/components/ui/dialog'\` - DOESN'T EXIST!
+- ❌ \`import { useToast } from '@/hooks/use-toast'\` - DOESN'T EXIST!
+- ❌ \`import { Toaster } from '@/components/ui/toaster'\` - DOESN'T EXIST!
+- ❌ \`import { Avatar } from '@/components/ui/avatar'\` - DOESN'T EXIST!
+- ❌ \`import { DropdownMenu } from '@/components/ui/dropdown-menu'\` - DOESN'T EXIST!
+- ❌ \`import { Select } from '@/components/ui/select'\` - DOESN'T EXIST!
+- ❌ Any import from \`@/components/ui/\` except button, input, card
+
+**REMEMBER**: If you import components that don't exist, the Vercel build WILL FAIL with "Cannot find module" errors!
 
 ### Why This Matters
 1. **40-60% faster generation**: Pre-built components vs custom code

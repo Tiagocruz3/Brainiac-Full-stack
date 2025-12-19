@@ -105,21 +105,81 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
     return langMap[ext || ''] || 'text';
   };
 
+  const getFileIcon = (fileName: string): string => {
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    const iconMap: Record<string, string> = {
+      'tsx': '⚛️',
+      'ts': '🔷',
+      'jsx': '⚛️',
+      'js': '📜',
+      'json': '📋',
+      'css': '🎨',
+      'html': '🌐',
+      'md': '📝',
+      'config': '⚙️',
+    };
+    return iconMap[ext || ''] || '📄';
+  };
+
+  const highlightSyntax = (code: string, _language: string): JSX.Element => {
+    // Simple syntax highlighting with color coding
+    const lines = code.split('\n');
+    
+    return (
+      <>
+        {lines.map((line, idx) => {
+          let highlightedLine = line;
+          
+          // Keywords
+          const keywords = ['import', 'export', 'const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'class', 'interface', 'type', 'enum', 'async', 'await', 'from', 'default'];
+          keywords.forEach(keyword => {
+            const regex = new RegExp(`\\b(${keyword})\\b`, 'g');
+            highlightedLine = highlightedLine.replace(regex, `<span class="text-purple-400">$1</span>`);
+          });
+          
+          // Strings
+          highlightedLine = highlightedLine.replace(/(["'`])(.*?)\1/g, '<span class="text-green-400">$1$2$1</span>');
+          
+          // Comments
+          highlightedLine = highlightedLine.replace(/(\/\/.*$)/g, '<span class="text-zinc-500 italic">$1</span>');
+          highlightedLine = highlightedLine.replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="text-zinc-500 italic">$1</span>');
+          
+          // Numbers
+          highlightedLine = highlightedLine.replace(/\b(\d+)\b/g, '<span class="text-yellow-400">$1</span>');
+          
+          // JSX tags
+          highlightedLine = highlightedLine.replace(/&lt;(\/?[A-Z]\w*)/g, '<span class="text-pink-400">&lt;$1</span>');
+          highlightedLine = highlightedLine.replace(/&lt;(\/?[a-z]\w*)/g, '<span class="text-blue-400">&lt;$1</span>');
+          
+          return (
+            <div key={idx} className="flex">
+              <span className="text-zinc-600 select-none w-12 text-right pr-4 flex-shrink-0">
+                {idx + 1}
+              </span>
+              <span dangerouslySetInnerHTML={{ __html: highlightedLine || ' ' }} />
+            </div>
+          );
+        })}
+      </>
+    );
+  };
+
   const renderFileTree = (node: FileNode, depth = 0): React.ReactNode => {
     if (node.type === 'file') {
       const isSelected = selectedFile === node.path;
+      const icon = getFileIcon(node.name);
       return (
         <div
           key={node.path}
           className={cn(
-            'flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-zinc-800 rounded text-sm',
-            isSelected && 'bg-zinc-800 text-purple-400'
+            'flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-zinc-800/50 rounded text-sm transition-colors',
+            isSelected && 'bg-zinc-800 text-purple-400 border-l-2 border-purple-500'
           )}
           style={{ paddingLeft: `${depth * 12 + 8}px` }}
           onClick={() => setSelectedFile(node.path)}
         >
-          <File className="h-4 w-4 text-zinc-500" />
-          <span className="text-zinc-300">{node.name}</span>
+          <span className="text-sm">{icon}</span>
+          <span className="text-zinc-300 font-mono text-xs">{node.name}</span>
         </div>
       );
     }
@@ -133,7 +193,7 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
     return (
       <div key={node.path}>
         <div
-          className="flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-zinc-800 rounded text-sm"
+          className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-zinc-800/50 rounded text-sm transition-colors"
           style={{ paddingLeft: `${depth * 12 + 8}px` }}
           onClick={() => toggleFolder(node.path)}
         >
@@ -142,7 +202,7 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
           ) : (
             <Folder className="h-4 w-4 text-zinc-500" />
           )}
-          <span className="text-zinc-300 font-medium">{node.name}</span>
+          <span className="text-zinc-300 font-medium font-mono text-xs">{node.name}</span>
         </div>
         {isExpanded && node.children?.map(child => renderFileTree(child, depth + 1))}
       </div>
@@ -227,11 +287,11 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-hidden">
             {selectedFileContent ? (
-              <pre className="h-full overflow-auto p-4 text-sm text-zinc-300 font-mono bg-zinc-950">
-                <code className={`language-${getLanguageFromFileName(selectedFile!)}`}>
-                  {selectedFileContent}
-                </code>
-              </pre>
+              <div className="h-full overflow-auto bg-zinc-950">
+                <pre className="p-4 text-sm font-mono leading-relaxed">
+                  {highlightSyntax(selectedFileContent, getLanguageFromFileName(selectedFile!))}
+                </pre>
+              </div>
             ) : (
               <div className="h-full flex items-center justify-center text-zinc-500">
                 <div className="text-center">
