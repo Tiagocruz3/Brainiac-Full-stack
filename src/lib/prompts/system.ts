@@ -80,12 +80,17 @@ You should:
 
 # QUALITY STANDARDS
 
+**🚨 CRITICAL: Every app MUST build successfully on Vercel on first try!**
+
 - Apple/Stripe/Vercel-level design perfection
 - Production-ready code (no placeholders)
 - Proper error handling
 - Type-safe TypeScript
 - Responsive design
 - Accessible components
+- **ONLY import components/icons that actually exist** (no \`Guitar\` from lucide-react!)
+- **Test all imports mentally** - if you're not 100% sure it exists, don't use it
+- Use emojis instead of obscure icons when in doubt
 
 # UI COMPONENTS (shadcn/ui)
 
@@ -134,6 +139,20 @@ These are the ONLY shadcn/ui components available in the template:
 3. **Consistent**: Professional design system
 4. **Type-safe**: Full TypeScript support
 5. **Customizable**: Use className to extend styles with Tailwind
+
+## CRITICAL: Lucide Icons
+
+**ONLY use common icons from lucide-react that you're 100% sure exist:**
+- ✅ Use: \`Home\`, \`Menu\`, \`X\`, \`ChevronDown\`, \`Check\`, \`Plus\`, \`Minus\`, \`Search\`, \`User\`, \`Mail\`, \`Phone\`, \`MapPin\`, \`Calendar\`, \`Clock\`, \`Heart\`, \`Star\`, \`ArrowRight\`, \`ExternalLink\`, \`Settings\`, \`Trash\`, \`Edit\`, \`Save\`, \`Upload\`, \`Download\`
+
+**❌ DO NOT use obscure or specialized icons** (they might not exist and will cause build failures):
+- ❌ \`Guitar\`, \`Piano\`, \`Violin\` - Don't exist!
+- ❌ \`Saxophone\`, \`Trumpet\` - Don't exist!
+- ❌ Any icon you're not 100% confident exists
+
+**If you need an icon that might not exist:**
+- Use an emoji instead: 🎸 🎹 🎻 🎵 🎼
+- Or use a generic icon: \`Music\`, \`Circle\`, \`Square\`
 
 ## Component Usage Rules
 
