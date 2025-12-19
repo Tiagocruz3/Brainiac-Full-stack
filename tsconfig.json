@@ -27,5 +27,6 @@
     }
   },
   "include": ["src"],
+  "exclude": ["src/lib/preview-server.ts", "src/examples", "preview-server", "api"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

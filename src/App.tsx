@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Settings as SettingsIcon } from 'lucide-react';
 import { Button } from './components/ui/Button';
 import { Settings } from './components/Settings';
@@ -17,13 +17,13 @@ function App() {
   const [hasSettings, setHasSettings] = useState(false);
   const [messages, setMessages] = useState<AgentMessage[]>([]);
   const [conversationHistory, setConversationHistory] = useState<any[]>([]); // Anthropic message format
-  const [currentProject, setCurrentProject] = useState<BuildStatus['currentProject']>();
+  const [_currentProject, setCurrentProject] = useState<BuildStatus['currentProject']>();
   const [buildStatus, setBuildStatus] = useState<BuildStatus>({
     stage: 'idle',
     message: '',
     progress: 0,
   });
-  const [maxProgress, setMaxProgress] = useState(0); // Track highest progress
+  const [_maxProgress, setMaxProgress] = useState(0); // Track highest progress
   const [isGenerating, setIsGenerating] = useState(false);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [projectHistory, setProjectHistory] = useState<ProjectHistoryType[]>([]);
@@ -43,7 +43,7 @@ function App() {
     setProjectHistory(loadHistory());
   }, []);
 
-  const handleSettingsSave = (settings: SettingsType) => {
+  const handleSettingsSave = (_settings: SettingsType) => {
     setHasSettings(true);
     // Settings are saved in the Settings component via localStorage
   };
