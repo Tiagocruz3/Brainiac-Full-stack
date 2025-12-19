@@ -6,10 +6,12 @@ import { Chat } from './components/Chat';
 import { StatusBar } from './components/StatusBar';
 import { ProjectHistory } from './components/ProjectHistory';
 import { RepoManager } from './components/RepoManager';
+import { PreviewManagerWithIframe } from './components/PreviewManager';
 import { Settings as SettingsType, AgentMessage, BuildStatus, ProjectHistory as ProjectHistoryType } from './types';
 import { hasValidSettings, loadHistory, loadSettings, saveProject } from './lib/storage';
 import { generateId } from './lib/utils';
 import { runAgent } from './lib/agent';
+import { templates } from './lib/templates';
 
 function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -28,6 +30,8 @@ function App() {
   const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [projectHistory, setProjectHistory] = useState<ProjectHistoryType[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>('claude-sonnet-4-20250514');
+  const [previewFiles, setPreviewFiles] = useState<Record<string, string> | null>(null);
+  const [currentProjectId, setCurrentProjectId] = useState<string>('');
 
   useEffect(() => {
     // Check if settings exist on mount
@@ -46,6 +50,15 @@ function App() {
   const handleSettingsSave = (_settings: SettingsType) => {
     setHasSettings(true);
     // Settings are saved in the Settings component via localStorage
+  };
+
+  const loadTemplateForPreview = (_userMessage: string) => {
+    // Load the todo-app template for preview
+    const template = templates.find((t: { name: string }) => t.name === 'todo-app');
+    if (template) {
+      console.log('📦 Loading template for preview...');
+      setPreviewFiles(template.files);
+    }
   };
 
   const handleSendMessage = async (message: string) => {
@@ -86,6 +99,11 @@ function App() {
     };
 
     try {
+      // Generate a new project ID for this build
+      const projectId = `project-${Date.now()}`;
+      setCurrentProjectId(projectId);
+      setPreviewFiles(null); // Clear previous preview
+
       // Run the agent with conversation history for context!
       const result = await runAgent(
         message,
@@ -107,7 +125,11 @@ function App() {
           if (progress === 20) addStepMessage('Configuring database...');
           if (progress === 50) addStepMessage('Database provisioned successfully!');
           if (progress === 58) addStepMessage('Setting up authentication...');
-          if (progress === 60) addStepMessage('Creating GitHub repository...');
+          if (progress === 60) {
+            addStepMessage('Creating GitHub repository...');
+            // Load template files for preview
+            loadTemplateForPreview(message);
+          }
           if (progress === 70) addStepMessage('Generating application code...');
           if (progress === 80) addStepMessage('Deploying to production...');
           if (progress === 95) addStepMessage('Finalizing deployment...');
@@ -273,16 +295,35 @@ function App() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        <Chat
-          messages={messages}
-          onSendMessage={handleSendMessage}
-          isBuilding={isGenerating}
-          buildStatus={buildStatus}
-          onStopGeneration={handleStopGeneration}
-          selectedModel={selectedModel}
-          onModelChange={setSelectedModel}
-        />
+      <div className="flex-1 flex flex-col md:flex-row gap-4 overflow-hidden">
+        {/* Chat Column */}
+        <div className={`flex flex-col ${previewFiles ? 'md:w-1/2' : 'w-full'} transition-all duration-300`}>
+          <Chat
+            messages={messages}
+            onSendMessage={handleSendMessage}
+            isBuilding={isGenerating}
+            buildStatus={buildStatus}
+            onStopGeneration={handleStopGeneration}
+            selectedModel={selectedModel}
+            onModelChange={setSelectedModel}
+          />
+        </div>
+
+        {/* Preview Column */}
+        {previewFiles && currentProjectId && (
+          <div className="flex flex-col md:w-1/2 animate-in slide-in-from-right">
+            <PreviewManagerWithIframe
+              projectId={currentProjectId}
+              files={previewFiles}
+              autoStart={true}
+              showProgress={true}
+              showControls={true}
+              onPreviewReady={(url) => console.log('🎬 Preview ready:', url)}
+              onError={(error) => console.error('❌ Preview error:', error)}
+              className="h-full"
+            />
+          </div>
+        )}
       </div>
 
       {/* Settings Modal */}
