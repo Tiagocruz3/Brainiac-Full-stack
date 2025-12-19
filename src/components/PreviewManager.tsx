@@ -67,7 +67,7 @@ export interface PreviewProgress {
   message: string;
 }
 
-const API_BASE_URL = process.env.VITE_PREVIEW_API_URL || '/api/preview';
+const API_BASE_URL = import.meta.env.VITE_PREVIEW_API_URL || '/api/preview';
 
 /**
  * PreviewManager Component
@@ -138,7 +138,7 @@ export const PreviewManager: React.FC<PreviewManagerProps> = ({
       });
 
       // Step 1: Create preview server
-      const createResponse = await fetch(`${API_BASE_URL}?action=create`, {
+      const createResponse = await fetch(`${API_BASE_URL}/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -185,7 +185,7 @@ export const PreviewManager: React.FC<PreviewManagerProps> = ({
         });
 
         // Write file to preview server
-        const updateResponse = await fetch(`${API_BASE_URL}?action=update`, {
+        const updateResponse = await fetch(`${API_BASE_URL}/update`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -243,8 +243,10 @@ export const PreviewManager: React.FC<PreviewManagerProps> = ({
     if (!serverId) return;
 
     try {
-      await fetch(`${API_BASE_URL}?serverId=${serverId}`, {
-        method: 'DELETE',
+      await fetch(`${API_BASE_URL}/destroy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: serverId }),
       });
       console.log('Preview server destroyed:', serverId);
     } catch (err) {
