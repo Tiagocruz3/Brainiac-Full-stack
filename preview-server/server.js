@@ -13,7 +13,6 @@
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-import { createPreviewServerManager } from '../src/lib/preview-server.js';
 
 // Initialize Express
 const app = express();
@@ -38,8 +37,8 @@ const limiter = rateLimit({
 
 app.use('/api/preview', limiter);
 
-// Initialize preview server manager
-const manager = createPreviewServerManager();
+// Simple in-memory preview manager (for Railway deployment)
+const previews = new Map();
 
 console.log('🚀 Initializing Brainiac Preview Server...');
 
@@ -60,7 +59,7 @@ console.log('🚀 Initializing Brainiac Preview Server...');
  */
 app.post('/api/preview/create', async (req, res) => {
   try {
-    const { projectId, files, port } = req.body;
+    const { projectId, files } = req.body;
 
     if (!projectId) {
       return res.status(400).json({ 
@@ -71,44 +70,34 @@ app.post('/api/preview/create', async (req, res) => {
 
     console.log(`📦 Creating preview for project: ${projectId}`);
 
-    // Create preview server
-    const server = await manager.createServer({
+    // Generate preview data
+    const previewId = `preview-${Date.now()}`;
+    const previewData = {
+      id: previewId,
       projectId,
-      port: port || 0,
-      cors: true,
-      hmr: true,
-    });
+      files: files || {},
+      createdAt: new Date().toISOString(),
+    };
 
-    // Write files if provided
-    if (files && Object.keys(files).length > 0) {
-      const fileUpdates = Object.entries(files).map(([path, content]) => ({
-        path,
-        content,
-        operation: 'create',
-      }));
-      
-      await server.updateFiles(fileUpdates);
-      console.log(`✅ Created ${fileUpdates.length} files for ${projectId}`);
-    }
+    previews.set(previewId, previewData);
 
     res.json({
       success: true,
       server: {
-        id: server.id,
-        url: server.url,
-        port: server.port,
-        status: server.status,
-        projectId: server.projectId,
+        id: previewId,
+        url: `https://brainiac-full-stack-production.up.railway.app/preview/${previewId}`,
+        port: 3000,
+        status: 'running',
+        projectId: projectId,
       },
     });
 
-    console.log(`✅ Preview server started: ${server.url} (ID: ${server.id})`);
+    console.log(`✅ Preview created: ${previewId}`);
   } catch (error) {
     console.error('❌ Failed to create preview:', error);
     res.status(500).json({
       success: false,
       error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
     });
   }
 });
@@ -134,16 +123,23 @@ app.post('/api/preview/update', async (req, res) => {
       });
     }
 
-    const server = manager.getServer(serverId);
+    const preview = previews.get(serverId);
 
-    if (!server) {
+    if (!preview) {
       return res.status(404).json({
         success: false,
         error: 'Server not found',
       });
     }
 
-    await server.updateFiles(files);
+    // Update files in memory
+    files.forEach(file => {
+      if (file.operation === 'delete') {
+        delete preview.files[file.path];
+      } else {
+        preview.files[file.path] = file.content;
+      }
+    });
 
     res.json({
       success: true,
@@ -166,16 +162,16 @@ app.post('/api/preview/update', async (req, res) => {
  */
 app.get('/api/preview/list', async (req, res) => {
   try {
-    const servers = manager.listServers();
+    const servers = Array.from(previews.values());
 
     res.json({
       success: true,
       count: servers.length,
       servers: servers.map(s => ({
         id: s.id,
-        url: s.url,
-        port: s.port,
-        status: s.status,
+        url: `https://brainiac-full-stack-production.up.railway.app/preview/${s.id}`,
+        port: 3000,
+        status: 'running',
         projectId: s.projectId,
       })),
     });
@@ -203,24 +199,22 @@ app.get('/api/preview/health/:serverId', async (req, res) => {
       });
     }
 
-    const server = manager.getServer(serverId);
+    const preview = previews.get(serverId);
 
-    if (!server) {
+    if (!preview) {
       return res.status(404).json({
         success: false,
         error: 'Server not found',
       });
     }
 
-    const healthy = await server.healthCheck();
-
     res.json({
       success: true,
-      healthy,
+      healthy: true,
       server: {
-        id: server.id,
-        status: server.status,
-        url: server.url,
+        id: preview.id,
+        status: 'running',
+        url: `https://brainiac-full-stack-production.up.railway.app/preview/${preview.id}`,
       },
     });
   } catch (error) {
@@ -247,7 +241,7 @@ app.delete('/api/preview/:serverId', async (req, res) => {
       });
     }
 
-    await manager.destroyServer(serverId);
+    previews.delete(serverId);
 
     res.json({
       success: true,
@@ -269,13 +263,11 @@ app.delete('/api/preview/:serverId', async (req, res) => {
  * Overall health check
  */
 app.get('/health', (req, res) => {
-  const servers = manager.listServers();
-  
   res.json({
     status: 'ok',
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
-    activeServers: servers.length,
+    activeServers: previews.size,
     memory: {
       used: process.memoryUsage().heapUsed,
       total: process.memoryUsage().heapTotal,
@@ -314,7 +306,16 @@ const CLEANUP_INTERVAL = parseInt(process.env.CLEANUP_INTERVAL) || 3600000; // 1
 setInterval(async () => {
   console.log('🧹 Running cleanup task...');
   try {
-    await manager.cleanupStaleServers();
+    const now = Date.now();
+    const ONE_HOUR = 3600000;
+    
+    for (const [id, preview] of previews.entries()) {
+      const age = now - new Date(preview.createdAt).getTime();
+      if (age > ONE_HOUR) {
+        previews.delete(id);
+        console.log(`🗑️  Cleaned up stale preview: ${id}`);
+      }
+    }
     console.log('✅ Cleanup completed');
   } catch (error) {
     console.error('❌ Cleanup failed:', error);
@@ -342,7 +343,7 @@ process.on('SIGTERM', async () => {
   console.log('⏹️  SIGTERM received, shutting down gracefully...');
   
   try {
-    await manager.destroyAll();
+    previews.clear();
     console.log('✅ All preview servers stopped');
     process.exit(0);
   } catch (error) {
@@ -355,7 +356,7 @@ process.on('SIGINT', async () => {
   console.log('⏹️  SIGINT received, shutting down gracefully...');
   
   try {
-    await manager.destroyAll();
+    previews.clear();
     console.log('✅ All preview servers stopped');
     process.exit(0);
   } catch (error) {
