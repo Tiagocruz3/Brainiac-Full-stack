@@ -237,22 +237,36 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
       setIsTyping(true);
 
       const totalLines = selectedFileContent.split('\n').length;
-      const linesPerStep = Math.max(1, Math.ceil(totalLines / 30)); // Show ~30 frames
-      const delay = 20; // 20ms per frame = smooth 50fps animation
+      
+      // Slower, very visible animation - like watching someone type
+      const totalDuration = 1200; // 1.2 seconds total
+      const framesPerSecond = 60;
+      const totalFrames = Math.floor((totalDuration / 1000) * framesPerSecond);
+      const linesPerFrame = Math.max(1, Math.ceil(totalLines / totalFrames));
+      const delay = Math.floor(1000 / framesPerSecond); // ~16.7ms for 60fps
 
-      let currentLine = 0;
-      const timer = setInterval(() => {
-        currentLine += linesPerStep;
-        if (currentLine >= totalLines) {
-          setVisibleLines(totalLines);
-          setIsTyping(false);
-          clearInterval(timer);
-        } else {
-          setVisibleLines(currentLine);
-        }
-      }, delay);
+      let animationTimer: NodeJS.Timeout;
 
-      return () => clearInterval(timer);
+      // Small initial delay so user sees the animation start
+      const startDelay = setTimeout(() => {
+        let currentLine = 0;
+        animationTimer = setInterval(() => {
+          currentLine += linesPerFrame;
+          if (currentLine >= totalLines) {
+            setVisibleLines(totalLines);
+            setIsTyping(false);
+            clearInterval(animationTimer);
+          } else {
+            setVisibleLines(currentLine);
+          }
+        }, delay);
+      }, 150); // 150ms delay before starting so user definitely sees it
+
+      // Cleanup both timers
+      return () => {
+        clearTimeout(startDelay);
+        if (animationTimer) clearInterval(animationTimer);
+      };
     }
   }, [selectedFileContent, lastFileContent]);
 
@@ -332,21 +346,26 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
           </div>
           <div className="flex-1 overflow-auto bg-[#0a0a0a]">
             {selectedFileContent ? (
-              <pre className="p-3 text-[11px] font-mono leading-[1.6]">
-                {highlightSyntax(
-                  selectedFileContent, 
-                  getLanguageFromFileName(selectedFile!),
-                  isTyping ? visibleLines : undefined
-                )}
-                {isTyping && (
-                  <div className="flex mt-0.5 animate-pulse">
-                    <span className="text-zinc-700 select-none w-8 text-right pr-2 flex-shrink-0 text-[10px] leading-[1.6]">
-                      {visibleLines + 1}
-                    </span>
-                    <span className="inline-block w-1.5 h-3.5 bg-purple-500 animate-pulse" />
-                  </div>
-                )}
-              </pre>
+              <div className={cn(
+                "transition-opacity duration-200",
+                isTyping ? "opacity-100" : "opacity-100"
+              )}>
+                <pre className="p-3 text-[11px] font-mono leading-[1.6]">
+                  {highlightSyntax(
+                    selectedFileContent, 
+                    getLanguageFromFileName(selectedFile!),
+                    isTyping ? visibleLines : undefined
+                  )}
+                  {isTyping && visibleLines > 0 && (
+                    <div className="flex mt-0.5">
+                      <span className="text-zinc-700 select-none w-8 text-right pr-2 flex-shrink-0 text-[10px] leading-[1.6]">
+                        {visibleLines + 1}
+                      </span>
+                      <span className="inline-block w-1.5 h-3.5 bg-purple-500 animate-pulse shadow-lg shadow-purple-500/50" />
+                    </div>
+                  )}
+                </pre>
+              </div>
             ) : (
               <div className="h-full flex items-center justify-center text-zinc-600">
                 <div className="text-center">
