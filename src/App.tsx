@@ -11,7 +11,6 @@ import { Settings as SettingsType, AgentMessage, BuildStatus, ProjectHistory as 
 import { hasValidSettings, loadHistory, loadSettings, saveProject } from './lib/storage';
 import { generateId } from './lib/utils';
 import { runAgent } from './lib/agent';
-import { templates } from './lib/templates';
 
 function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -50,15 +49,6 @@ function App() {
   const handleSettingsSave = (_settings: SettingsType) => {
     setHasSettings(true);
     // Settings are saved in the Settings component via localStorage
-  };
-
-  const loadTemplateForPreview = (_userMessage: string) => {
-    // Load the todo-app template for preview
-    const template = templates.find((t: { name: string }) => t.name === 'todo-app');
-    if (template) {
-      console.log('📦 Loading template for preview...');
-      setPreviewFiles(template.files);
-    }
   };
 
   const handleSendMessage = async (message: string) => {
@@ -127,8 +117,6 @@ function App() {
           if (progress === 58) addStepMessage('Setting up authentication...');
           if (progress === 60) {
             addStepMessage('Creating GitHub repository...');
-            // Load template files for preview
-            loadTemplateForPreview(message);
           }
           if (progress === 70) addStepMessage('Generating application code...');
           if (progress === 80) addStepMessage('Deploying to production...');
@@ -136,7 +124,13 @@ function App() {
         },
         conversationHistory.length > 0 ? conversationHistory : undefined,
         controller.signal, // ← Pass abort signal!
-        selectedModel // ← Pass selected model!
+        selectedModel, // ← Pass selected model!
+        // 🎬 File update callback for live preview!
+        (files) => {
+          console.log('🎬 Received files for preview:', Object.keys(files));
+          addStepMessage('🎬 Live preview ready!');
+          setPreviewFiles(files);
+        }
       );
 
       // IMPORTANT: Reset UI state IMMEDIATELY

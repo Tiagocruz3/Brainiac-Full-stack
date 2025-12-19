@@ -29,13 +29,18 @@ export interface ProgressCallback {
   (stage: string, message: string, progress: number): void;
 }
 
+export interface FileUpdateCallback {
+  (files: Record<string, string>): void;
+}
+
 export async function runAgent(
   userMessage: string,
   apiKeys: ApiKeys,
   onProgress: ProgressCallback,
   conversationHistory?: Anthropic.MessageParam[], // ← For context
   signal?: AbortSignal, // ← NEW! For stop button
-  model: string = 'claude-sonnet-4-20250514' // ← Model selection
+  model: string = 'claude-sonnet-4-20250514', // ← Model selection
+  onFileUpdate?: FileUpdateCallback // ← NEW! For preview updates
 ): Promise<AgentResponse> {
   try {
     // Check if aborted before starting
@@ -361,6 +366,21 @@ Use create_app_from_template to avoid rate limits and build 10x faster!`;
               }
 
               console.log(`📦 Using template: ${template.name} with ${Object.keys(template.files).length} files`);
+
+              // 🎬 Collect files for preview
+              const previewFiles: Record<string, string> = { ...template.files };
+
+              // If custom App.tsx provided, update preview files
+              if (toolInput.customize_app) {
+                previewFiles['src/App.tsx'] = toolInput.customize_app;
+                console.log('🎨 Custom App.tsx detected, updating preview...');
+              }
+
+              // 🎬 Send files to preview IMMEDIATELY (before GitHub)
+              if (onFileUpdate) {
+                onFileUpdate(previewFiles);
+                console.log(`🎬 Sent ${Object.keys(previewFiles).length} files to preview`);
+              }
 
               // Create the GitHub repo
               const repo = await createGithubRepo(
