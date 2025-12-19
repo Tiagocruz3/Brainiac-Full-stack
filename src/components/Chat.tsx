@@ -77,6 +77,25 @@ export const Chat: React.FC<ChatProps> = ({ messages, onSendMessage, isBuilding,
     "Make a landing page for a SaaS product",
   ];
 
+  // Typing animation component
+  const ThinkingIndicator = () => (
+    <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
+        <span className="inline-block w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '0ms', animationDuration: '1.4s' }} />
+        <span className="inline-block w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '200ms', animationDuration: '1.4s' }} />
+        <span className="inline-block w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '400ms', animationDuration: '1.4s' }} />
+      </div>
+      <span className="text-xs text-zinc-400 font-medium">
+        {buildStatus?.stage === 'idle' ? 'Thinking...' : 'Planning...'}
+      </span>
+    </div>
+  );
+
+  // Cursor typing animation for active thinking
+  const CursorAnimation = () => (
+    <span className="inline-block w-0.5 h-4 bg-purple-500 animate-pulse ml-0.5" />
+  );
+
   return (
     <div className="flex flex-col h-full">
       {/* Messages */}
@@ -141,8 +160,23 @@ export const Chat: React.FC<ChatProps> = ({ messages, onSendMessage, isBuilding,
               </div>
             ))}
             
+            {/* Thinking Animation - Shows when starting to process */}
+            {isBuilding && (!buildStatus || buildStatus.stage === 'idle' || buildStatus.progress === 0) && (
+              <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="max-w-2xl rounded-2xl px-4 py-3 bg-zinc-800/60 backdrop-blur-sm border border-purple-500/10 text-zinc-100">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <Sparkles className="h-4 w-4 text-purple-400 animate-pulse" />
+                    </div>
+                    <ThinkingIndicator />
+                    <CursorAnimation />
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {/* Compact Build Status */}
-            {isBuilding && buildStatus && buildStatus.stage !== 'idle' && (
+            {isBuilding && buildStatus && buildStatus.stage !== 'idle' && buildStatus.progress > 0 && (
               <div className="flex justify-start">
                 <div className="max-w-2xl w-full rounded-xl px-4 py-3 bg-gradient-to-br from-purple-900/10 to-zinc-900/30 border border-purple-500/20 backdrop-blur-sm shadow-lg shadow-purple-500/5 animate-in fade-in slide-in-from-bottom-2 duration-500">
                   <div className="flex items-center space-x-3">
@@ -167,8 +201,9 @@ export const Chat: React.FC<ChatProps> = ({ messages, onSendMessage, isBuilding,
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white mb-1.5">
+                      <p className="text-sm font-medium text-white mb-1.5 animate-in fade-in slide-in-from-left-1 duration-300">
                         {buildStatus.message}
+                        <span className="inline-block w-0.5 h-3.5 bg-purple-400 animate-pulse ml-1" />
                       </p>
                       <div className="flex items-center gap-2">
                         <div className="flex-1 h-1.5 bg-zinc-800/50 rounded-full overflow-hidden">
@@ -179,7 +214,9 @@ export const Chat: React.FC<ChatProps> = ({ messages, onSendMessage, isBuilding,
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
                           </div>
                         </div>
-                        <span className="text-xs text-purple-400 font-medium min-w-[3ch] text-right">{buildStatus.progress}%</span>
+                        <span className="text-xs text-purple-400 font-medium min-w-[3ch] text-right tabular-nums">
+                          {buildStatus.progress}%
+                        </span>
                       </div>
                     </div>
                   </div>
