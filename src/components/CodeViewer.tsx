@@ -34,6 +34,9 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [copiedFile, setCopiedFile] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['root']));
+  const [visibleLines, setVisibleLines] = useState<number>(0);
+  const [isTyping, setIsTyping] = useState<boolean>(false);
+  const [lastFileContent, setLastFileContent] = useState<string>('');
 
   // Build file tree from flat file list
   const buildFileTree = (files: Record<string, string>): FileNode => {
@@ -120,9 +123,10 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
     return iconMap[ext || ''] || '📄';
   };
 
-  const highlightSyntax = (code: string, _language: string): JSX.Element => {
+  const highlightSyntax = (code: string, _language: string, maxLines?: number): JSX.Element => {
     // Claude-style syntax highlighting with subtle colors
-    const lines = code.split('\n');
+    const allLines = code.split('\n');
+    const lines = maxLines ? allLines.slice(0, maxLines) : allLines;
     
     return (
       <>
@@ -222,6 +226,36 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
     }
   }, [defaultFile, selectedFile]);
 
+  // Typing animation effect
+  React.useEffect(() => {
+    if (!selectedFileContent) return;
+
+    // Check if content changed (new file selected or content updated)
+    if (selectedFileContent !== lastFileContent) {
+      setLastFileContent(selectedFileContent);
+      setVisibleLines(0);
+      setIsTyping(true);
+
+      const totalLines = selectedFileContent.split('\n').length;
+      const linesPerStep = Math.max(1, Math.ceil(totalLines / 30)); // Show ~30 frames
+      const delay = 20; // 20ms per frame = smooth 50fps animation
+
+      let currentLine = 0;
+      const timer = setInterval(() => {
+        currentLine += linesPerStep;
+        if (currentLine >= totalLines) {
+          setVisibleLines(totalLines);
+          setIsTyping(false);
+          clearInterval(timer);
+        } else {
+          setVisibleLines(currentLine);
+        }
+      }, delay);
+
+      return () => clearInterval(timer);
+    }
+  }, [selectedFileContent, lastFileContent]);
+
   return (
     <div className={cn('h-full flex flex-col border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950', className)}>
       {/* Compact Header */}
@@ -265,10 +299,19 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
         {/* Compact Code Display */}
         <div className="col-span-4 flex flex-col overflow-hidden">
           <div className="flex items-center justify-between px-3 py-1 bg-zinc-900/30 border-b border-zinc-800">
-            <span className="text-[11px] font-mono text-purple-400 truncate">
-              {selectedFile || 'No file selected'}
-            </span>
-            {selectedFileContent && (
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-mono text-purple-400 truncate">
+                {selectedFile || 'No file selected'}
+              </span>
+              {isTyping && (
+                <div className="flex items-center gap-1 text-[10px] text-zinc-500">
+                  <span className="inline-block w-1 h-1 bg-purple-500 rounded-full animate-pulse" />
+                  <span className="inline-block w-1 h-1 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '200ms' }} />
+                  <span className="inline-block w-1 h-1 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '400ms' }} />
+                </div>
+              )}
+            </div>
+            {selectedFileContent && !isTyping && (
               <button
                 onClick={() => copyToClipboard(selectedFileContent, selectedFile!)}
                 className="flex items-center gap-1 px-2 py-0.5 hover:bg-zinc-800 rounded text-[10px] text-zinc-400 hover:text-zinc-200 transition-colors"
@@ -290,7 +333,19 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
           <div className="flex-1 overflow-auto bg-[#0a0a0a]">
             {selectedFileContent ? (
               <pre className="p-3 text-[11px] font-mono leading-[1.6]">
-                {highlightSyntax(selectedFileContent, getLanguageFromFileName(selectedFile!))}
+                {highlightSyntax(
+                  selectedFileContent, 
+                  getLanguageFromFileName(selectedFile!),
+                  isTyping ? visibleLines : undefined
+                )}
+                {isTyping && (
+                  <div className="flex mt-0.5 animate-pulse">
+                    <span className="text-zinc-700 select-none w-8 text-right pr-2 flex-shrink-0 text-[10px] leading-[1.6]">
+                      {visibleLines + 1}
+                    </span>
+                    <span className="inline-block w-1.5 h-3.5 bg-purple-500 animate-pulse" />
+                  </div>
+                )}
               </pre>
             ) : (
               <div className="h-full flex items-center justify-center text-zinc-600">
