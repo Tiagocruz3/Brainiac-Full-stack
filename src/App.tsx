@@ -6,7 +6,7 @@ import { Chat } from './components/Chat';
 import { StatusBar } from './components/StatusBar';
 import { ProjectHistory } from './components/ProjectHistory';
 import { RepoManager } from './components/RepoManager';
-import { PreviewManagerWithIframe } from './components/PreviewManager';
+import { CodeViewer } from './components/CodeViewer';
 import { Settings as SettingsType, AgentMessage, BuildStatus, ProjectHistory as ProjectHistoryType } from './types';
 import { hasValidSettings, loadHistory, loadSettings, saveProject } from './lib/storage';
 import { generateId } from './lib/utils';
@@ -31,6 +31,8 @@ function App() {
   const [selectedModel, setSelectedModel] = useState<string>('claude-sonnet-4-20250514');
   const [previewFiles, setPreviewFiles] = useState<Record<string, string> | null>(null);
   const [currentProjectId, setCurrentProjectId] = useState<string>('');
+  const [currentProjectName, setCurrentProjectName] = useState<string>('');
+  const [currentDeploymentUrl, setCurrentDeploymentUrl] = useState<string>('');
 
   useEffect(() => {
     // Check if settings exist on mount
@@ -93,6 +95,8 @@ function App() {
       const projectId = `project-${Date.now()}`;
       setCurrentProjectId(projectId);
       setPreviewFiles(null); // Clear previous preview
+      setCurrentProjectName(message.slice(0, 50));
+      setCurrentDeploymentUrl('');
 
       // Run the agent with conversation history for context!
       const result = await runAgent(
@@ -161,6 +165,11 @@ function App() {
       // Save project context for follow-up edits
       if (result.data?.projectContext) {
         setCurrentProject(result.data.projectContext);
+      }
+
+      // Update deployment URL if available
+      if (result.data?.vercelUrl) {
+        setCurrentDeploymentUrl(result.data.vercelUrl);
       }
 
       // Save to history
@@ -303,17 +312,13 @@ function App() {
           />
         </div>
 
-        {/* Preview Column */}
+        {/* Code Viewer Column */}
         {previewFiles && currentProjectId && (
           <div className="flex flex-col md:w-1/2 animate-in slide-in-from-right">
-            <PreviewManagerWithIframe
-              projectId={currentProjectId}
+            <CodeViewer
               files={previewFiles}
-              autoStart={true}
-              showProgress={true}
-              showControls={true}
-              onPreviewReady={(url) => console.log('🎬 Preview ready:', url)}
-              onError={(error) => console.error('❌ Preview error:', error)}
+              projectName={currentProjectName || 'Generated App'}
+              deploymentUrl={currentDeploymentUrl}
               className="h-full"
             />
           </div>
