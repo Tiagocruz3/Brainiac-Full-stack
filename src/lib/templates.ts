@@ -198,6 +198,16 @@ export default {
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>`,
+      'src/vite-env.d.ts': `/// <reference types="vite/client" />
+
+interface ImportMetaEnv {
+  readonly VITE_SUPABASE_URL: string;
+  readonly VITE_SUPABASE_ANON_KEY: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}`,
       'src/main.tsx': `import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
