@@ -468,6 +468,14 @@ Use create_app_from_template to avoid rate limits and build 10x faster!`;
               // Decode base64 content for the agent
               if (result.content) {
                 result.decoded_content = atob(result.content);
+                
+                // 🎬 Send file to preview when reading
+                if (onFileUpdate && result.decoded_content) {
+                  const previewFiles: Record<string, string> = {};
+                  previewFiles[toolInput.path] = result.decoded_content;
+                  onFileUpdate(previewFiles);
+                  console.log(`🎬 Sent ${toolInput.path} to preview (read)`);
+                }
               }
               break;
 
@@ -480,6 +488,14 @@ Use create_app_from_template to avoid rate limits and build 10x faster!`;
             case 'update_github_file':
               onProgress('creating_repo', `Updating file: ${toolInput.path}...`, 68);
               result = await updateGithubFile(toolInput, apiKeys.github);
+              
+              // 🎬 Send updated file to preview immediately
+              if (onFileUpdate && toolInput.content) {
+                const previewFiles: Record<string, string> = {};
+                previewFiles[toolInput.path] = toolInput.content;
+                onFileUpdate(previewFiles);
+                console.log(`🎬 Sent ${toolInput.path} to preview (updated)`);
+              }
               break;
 
             case 'create_vercel_project':
