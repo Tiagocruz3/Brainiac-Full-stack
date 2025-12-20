@@ -44,6 +44,19 @@ export interface DetectedError {
   canAutoFix: boolean;
 }
 
+export interface BuildConfigError {
+  id: string;
+  category: 'config';
+  pattern: RegExp | null;
+  description: string;
+  severity: 'error' | 'warning';
+  examples: string[];
+  requiredFile?: string; // File that must exist
+  autoFix: ((files: Record<string, string>, content?: string) => Record<string, string>) | null;
+}
+
+export type FileSet = Record<string, string>;
+
 // =============================================================================
 // CATEGORY 1: TYPESCRIPT COMPILATION ERRORS
 // =============================================================================
@@ -637,6 +650,287 @@ const packageJsonErrors: PackageJsonError[] = [
 ];
 
 // =============================================================================
+// CATEGORY 6: BUILD CONFIGURATION ERRORS
+// =============================================================================
+
+const buildConfigErrors: BuildConfigError[] = [
+  {
+    id: 'missing-vite-config',
+    category: 'config',
+    pattern: /Could not resolve "vite\.config"|No vite\.config/i,
+    description: 'No vite.config.ts file',
+    severity: 'error',
+    requiredFile: 'vite.config.ts',
+    examples: [
+      '❌ Missing vite.config.ts',
+      '✅ vite.config.ts with React plugin',
+    ],
+    autoFix: (files) => {
+      files['vite.config.ts'] = `import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+  build: {
+    outDir: 'dist',
+  },
+})`;
+      return files;
+    }
+  },
+  {
+    id: 'wrong-output-dir',
+    category: 'config',
+    pattern: /Cannot find.*build\/|outDir.*build/i,
+    description: 'Output directory not "dist" (Vercel expects dist)',
+    severity: 'error',
+    examples: [
+      '❌ outDir: "build"',
+      '✅ outDir: "dist"',
+    ],
+    autoFix: (files, content) => {
+      if (content && files['vite.config.ts']) {
+        files['vite.config.ts'] = files['vite.config.ts']
+          .replace(/outDir:\s*['"]build['"]/, 'outDir: "dist"')
+          .replace(/outDir:\s*['"]output['"]/, 'outDir: "dist"');
+      }
+      return files;
+    }
+  },
+  {
+    id: 'missing-index-html',
+    category: 'config',
+    pattern: /Could not find.*index\.html|index\.html.*not found/i,
+    description: 'No index.html entry point',
+    severity: 'error',
+    requiredFile: 'index.html',
+    examples: [
+      '❌ Missing index.html',
+      '✅ index.html with #root and script tag',
+    ],
+    autoFix: (files) => {
+      files['index.html'] = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Brainiac App</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>`;
+      return files;
+    }
+  },
+  {
+    id: 'missing-tsconfig',
+    category: 'config',
+    pattern: /Cannot find.*tsconfig\.json|tsconfig\.json.*not found/i,
+    description: 'No tsconfig.json file',
+    severity: 'warning',
+    requiredFile: 'tsconfig.json',
+    examples: [
+      '❌ Missing tsconfig.json',
+      '✅ tsconfig.json with React JSX',
+    ],
+    autoFix: (files) => {
+      files['tsconfig.json'] = `{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}`;
+      return files;
+    }
+  },
+  {
+    id: 'missing-tsconfig-node',
+    category: 'config',
+    pattern: /Cannot find.*tsconfig\.node\.json/i,
+    description: 'No tsconfig.node.json for Vite config',
+    severity: 'warning',
+    requiredFile: 'tsconfig.node.json',
+    examples: [
+      '❌ Missing tsconfig.node.json',
+      '✅ tsconfig.node.json for vite.config.ts',
+    ],
+    autoFix: (files) => {
+      files['tsconfig.node.json'] = `{
+  "compilerOptions": {
+    "composite": true,
+    "skipLibCheck": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "strict": true
+  },
+  "include": ["vite.config.ts"]
+}`;
+      return files;
+    }
+  },
+  {
+    id: 'missing-main-entry',
+    category: 'config',
+    pattern: /Cannot find.*main\.tsx|src\/main\.tsx.*not found/i,
+    description: 'No src/main.tsx entry point',
+    severity: 'error',
+    requiredFile: 'src/main.tsx',
+    examples: [
+      '❌ Missing src/main.tsx',
+      '✅ src/main.tsx with ReactDOM.createRoot',
+    ],
+    autoFix: (files) => {
+      files['src/main.tsx'] = `import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App'
+import './index.css'
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)`;
+      return files;
+    }
+  },
+  {
+    id: 'missing-postcss-config',
+    category: 'config',
+    pattern: /PostCSS.*not configured|postcss\.config.*not found/i,
+    description: 'No postcss.config.js for Tailwind',
+    severity: 'warning',
+    requiredFile: 'postcss.config.js',
+    examples: [
+      '❌ Missing postcss.config.js',
+      '✅ postcss.config.js with tailwindcss',
+    ],
+    autoFix: (files) => {
+      files['postcss.config.js'] = `export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}`;
+      return files;
+    }
+  },
+  {
+    id: 'missing-tailwind-config',
+    category: 'config',
+    pattern: /tailwind\.config.*not found|Cannot find.*tailwind/i,
+    description: 'No tailwind.config.js for Tailwind CSS',
+    severity: 'warning',
+    requiredFile: 'tailwind.config.js',
+    examples: [
+      '❌ Missing tailwind.config.js',
+      '✅ tailwind.config.js with content paths',
+    ],
+    autoFix: (files) => {
+      files['tailwind.config.js'] = `/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}`;
+      return files;
+    }
+  },
+  {
+    id: 'missing-index-css',
+    category: 'config',
+    pattern: /Cannot find.*index\.css|src\/index\.css.*not found/i,
+    description: 'No src/index.css with Tailwind directives',
+    severity: 'warning',
+    requiredFile: 'src/index.css',
+    examples: [
+      '❌ Missing src/index.css',
+      '✅ src/index.css with @tailwind directives',
+    ],
+    autoFix: (files) => {
+      files['src/index.css'] = `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}`;
+      return files;
+    }
+  },
+  {
+    id: 'missing-vite-env-dts',
+    category: 'config',
+    pattern: /Property 'env' does not exist on type 'ImportMeta'/,
+    description: 'Missing vite-env.d.ts for import.meta.env types',
+    severity: 'error',
+    requiredFile: 'src/vite-env.d.ts',
+    examples: [
+      '❌ import.meta.env.VITE_X has no types',
+      '✅ src/vite-env.d.ts with env declarations',
+    ],
+    autoFix: (files) => {
+      files['src/vite-env.d.ts'] = `/// <reference types="vite/client" />
+
+interface ImportMetaEnv {
+  readonly VITE_SUPABASE_URL?: string
+  readonly VITE_SUPABASE_ANON_KEY?: string
+  readonly VITE_API_URL?: string
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv
+}`;
+      return files;
+    }
+  },
+];
+
+// =============================================================================
 // ALL ERROR PATTERNS
 // =============================================================================
 
@@ -960,6 +1254,130 @@ export function autoFixPackageJson(
  */
 export const PACKAGE_JSON_ERROR_PATTERNS = packageJsonErrors;
 
+// =============================================================================
+// BUILD CONFIGURATION CHECKING AND FIXING
+// =============================================================================
+
+/**
+ * Get list of required files for a Vite + React + Tailwind project
+ */
+export function getRequiredFiles(): string[] {
+  return buildConfigErrors
+    .filter(e => e.requiredFile)
+    .map(e => e.requiredFile as string);
+}
+
+/**
+ * Pre-check project files for missing configuration
+ */
+export function preCheckBuildConfig(files: FileSet): DetectedError[] {
+  const errors: DetectedError[] = [];
+  
+  for (const pattern of buildConfigErrors) {
+    if (pattern.requiredFile && !(pattern.requiredFile in files)) {
+      errors.push({
+        id: pattern.id,
+        message: pattern.description,
+        severity: pattern.severity,
+        canAutoFix: pattern.autoFix !== null,
+      });
+    }
+  }
+  
+  // Check vite.config.ts for wrong output dir
+  if (files['vite.config.ts']) {
+    const viteConfig = files['vite.config.ts'];
+    if (/outDir:\s*['"](?!dist)/.test(viteConfig)) {
+      errors.push({
+        id: 'wrong-output-dir',
+        message: 'Output directory should be "dist" for Vercel',
+        severity: 'error',
+        canAutoFix: true,
+      });
+    }
+  }
+  
+  // Check index.html for correct script entry
+  if (files['index.html']) {
+    const indexHtml = files['index.html'];
+    if (!indexHtml.includes('src/main.tsx') && !indexHtml.includes('src/main.ts')) {
+      errors.push({
+        id: 'wrong-entry-point',
+        message: 'index.html should reference src/main.tsx',
+        severity: 'warning',
+        canAutoFix: false,
+      });
+    }
+  }
+  
+  return errors;
+}
+
+/**
+ * Detect build config errors from build output
+ */
+export function detectBuildConfigErrorsFromOutput(buildOutput: string): DetectedError[] {
+  const errors: DetectedError[] = [];
+  
+  for (const pattern of buildConfigErrors) {
+    if (!pattern.pattern) continue;
+    
+    const match = buildOutput.match(pattern.pattern);
+    if (match) {
+      errors.push({
+        id: pattern.id,
+        message: pattern.description,
+        severity: pattern.severity,
+        canAutoFix: pattern.autoFix !== null,
+      });
+    }
+  }
+  
+  return errors;
+}
+
+/**
+ * Auto-fix build configuration by adding missing files
+ */
+export function autoFixBuildConfig(
+  files: FileSet,
+  errors: DetectedError[]
+): {
+  fixedFiles: FileSet;
+  fixedCount: number;
+  remainingErrors: DetectedError[];
+} {
+  let fixedFiles = { ...files };
+  let fixedCount = 0;
+  const remainingErrors: DetectedError[] = [];
+  
+  for (const error of errors) {
+    const pattern = buildConfigErrors.find(p => p.id === error.id);
+    if (pattern?.autoFix) {
+      const beforeFix = JSON.stringify(fixedFiles);
+      
+      // Get current file content if applicable
+      const currentContent = pattern.requiredFile ? files[pattern.requiredFile] : undefined;
+      fixedFiles = pattern.autoFix(fixedFiles, currentContent);
+      
+      if (JSON.stringify(fixedFiles) !== beforeFix) {
+        fixedCount++;
+      } else {
+        remainingErrors.push(error);
+      }
+    } else {
+      remainingErrors.push(error);
+    }
+  }
+  
+  return { fixedFiles, fixedCount, remainingErrors };
+}
+
+/**
+ * Get all build config error patterns (for export)
+ */
+export const BUILD_CONFIG_ERROR_PATTERNS = buildConfigErrors;
+
 /**
  * Generate error summary for system prompt
  */
@@ -1001,19 +1419,48 @@ export function generateErrorKnowledgeBase(): string {
     summary += '\n';
   }
   
+  // Build configuration errors
+  summary += `## Build Configuration Errors\n\n`;
+  for (const pattern of buildConfigErrors) {
+    summary += `### ${pattern.id} (${pattern.severity})\n`;
+    summary += `${pattern.description}\n`;
+    if (pattern.requiredFile) {
+      summary += `Required file: ${pattern.requiredFile}\n`;
+    }
+    summary += `Examples:\n`;
+    pattern.examples.forEach(ex => {
+      summary += `- ${ex}\n`;
+    });
+    summary += '\n';
+  }
+  
   return summary;
 }
 
 // Export for use in agent
 export const ERROR_CHECKER = {
+  // Patterns
   patterns: ALL_ERROR_PATTERNS,
   packagePatterns: packageJsonErrors,
+  buildConfigPatterns: buildConfigErrors,
+  
+  // Detection functions
   detectFromBuildOutput: detectErrorsFromBuildOutput,
   detectPackageErrors: detectPackageErrorsFromBuildOutput,
+  detectBuildConfigErrors: detectBuildConfigErrorsFromOutput,
+  
+  // Pre-check functions
   preCheck: preCheckCode,
   preCheckPackage: preCheckPackageJson,
+  preCheckBuildConfig: preCheckBuildConfig,
+  
+  // Auto-fix functions
   autoFix: autoFixErrors,
   autoFixPackage: autoFixPackageJson,
+  autoFixBuildConfig: autoFixBuildConfig,
+  
+  // Utilities
+  getRequiredFiles: getRequiredFiles,
   generateKnowledgeBase: generateErrorKnowledgeBase,
 };
 
