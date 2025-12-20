@@ -178,28 +178,36 @@ function App() {
           // Debounce file updates to avoid excessive re-renders
           previewOptimization.debounceFileUpdate(files, (debouncedFiles) => {
             console.log('🎬 Received files for preview:', Object.keys(debouncedFiles));
-            const fileCount = Object.keys(debouncedFiles).length;
-            setFilesGenerated(fileCount);
             
-            // Only update if files actually changed
-            if (previewOptimization.shouldRebuild(debouncedFiles)) {
-              setPreviewFiles(debouncedFiles);
+            // IMPORTANT: MERGE new files with existing files (don't replace!)
+            // This ensures that when update_github_file sends 1 file, we don't lose all other files
+            setPreviewFiles(prevFiles => {
+              const mergedFiles = { ...prevFiles, ...debouncedFiles };
+              const fileCount = Object.keys(mergedFiles).length;
+              setFilesGenerated(fileCount);
               
-              // Create preview instance
-              previewManager.createPreview(
-                projectId,
-                currentProjectName || 'Generated App',
-                debouncedFiles
-              ).then(({ success, error }) => {
-                if (!success && error) {
-                  setPreviewError(error);
-                }
-              });
-            }
-            
-            if (fileCount >= totalFiles) {
-              addStepMessage('🎬 All files generated!');
-            }
+              console.log(`🎬 Total files in preview: ${fileCount}`);
+              
+              // Only update preview manager if files actually changed
+              if (previewOptimization.shouldRebuild(mergedFiles)) {
+                // Create preview instance
+                previewManager.createPreview(
+                  projectId,
+                  currentProjectName || 'Generated App',
+                  mergedFiles
+                ).then(({ success, error }) => {
+                  if (!success && error) {
+                    setPreviewError(error);
+                  }
+                });
+              }
+              
+              if (fileCount >= totalFiles) {
+                addStepMessage('🎬 All files generated!');
+              }
+              
+              return mergedFiles;
+            });
           });
         }
       );
