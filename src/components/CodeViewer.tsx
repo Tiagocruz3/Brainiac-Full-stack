@@ -37,6 +37,7 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['root']));
   const [displayedContent, setDisplayedContent] = useState<string>('');
   const [isTyping, setIsTyping] = useState(false);
+  const [animatedFiles, setAnimatedFiles] = useState<Set<string>>(new Set());
 
   // Build file tree from flat file list
   const buildFileTree = (files: Record<string, string>): FileNode => {
@@ -176,6 +177,11 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
   const selectedFileContent = selectedFile ? files[selectedFile] : null;
   const defaultFile = Object.keys(files).find(f => f.includes('App.tsx') || f.includes('App.jsx')) || Object.keys(files)[0];
   
+  // Reset animated files when new files are generated
+  React.useEffect(() => {
+    setAnimatedFiles(new Set());
+  }, [files]);
+  
   React.useEffect(() => {
     if (!selectedFile && defaultFile) {
       setSelectedFile(defaultFile);
@@ -184,13 +190,20 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
 
   // Typing animation effect
   React.useEffect(() => {
-    if (!selectedFileContent) {
+    if (!selectedFileContent || !selectedFile) {
       setDisplayedContent('');
       setIsTyping(false);
       return;
     }
 
-    // Reset and start typing animation
+    // If this file has already been animated, show it instantly
+    if (animatedFiles.has(selectedFile)) {
+      setDisplayedContent(selectedFileContent);
+      setIsTyping(false);
+      return;
+    }
+
+    // First time viewing this file - play typing animation
     setDisplayedContent('');
     setIsTyping(true);
     let currentIndex = 0;
@@ -200,6 +213,8 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
       if (currentIndex >= selectedFileContent.length) {
         setIsTyping(false);
         clearInterval(typeInterval);
+        // Mark this file as animated
+        setAnimatedFiles(prev => new Set(prev).add(selectedFile));
         return;
       }
 
@@ -213,7 +228,7 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
       clearInterval(typeInterval);
       setIsTyping(false);
     };
-  }, [selectedFileContent]);
+  }, [selectedFileContent, selectedFile, animatedFiles]);
 
   return (
     <div className={cn('h-full flex flex-col border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950', className)}>
