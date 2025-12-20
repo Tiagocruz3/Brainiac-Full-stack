@@ -6,6 +6,7 @@ import { createVercelProject, addVercelEnvVar, triggerVercelDeployment } from '.
 import { SYSTEM_PROMPT } from './prompts/system';
 import { templates } from './templates';
 import { sleep } from './utils';
+import { ERROR_CHECKER } from './error-checker';
 
 export interface AgentResponse {
   success: boolean;
@@ -421,8 +422,31 @@ Use create_app_from_template to avoid rate limits and build 10x faster!`;
                 filesCreated++;
               }
 
-              // If custom App.tsx provided, create it
+              // If custom App.tsx provided, check for errors then create it
               if (toolInput.customize_app) {
+                onProgress('creating_repo', 'Checking App.tsx for errors...', 74);
+                
+                // 🔍 Pre-check for common errors BEFORE creating file
+                const preCheckErrors = ERROR_CHECKER.preCheck(toolInput.customize_app, 'src/App.tsx');
+                if (preCheckErrors.length > 0) {
+                  console.log('⚠️ Pre-check found potential issues:', preCheckErrors);
+                  
+                  // Try to auto-fix what we can
+                  const { fixedCode, fixedCount, remainingErrors } = ERROR_CHECKER.autoFix(
+                    toolInput.customize_app,
+                    preCheckErrors
+                  );
+                  
+                  if (fixedCount > 0) {
+                    console.log(`✅ Auto-fixed ${fixedCount} issues`);
+                    toolInput.customize_app = fixedCode;
+                  }
+                  
+                  if (remainingErrors.length > 0) {
+                    console.log('⚠️ Remaining issues that need manual review:', remainingErrors);
+                  }
+                }
+                
                 onProgress('creating_repo', 'Creating custom App.tsx...', 75);
                 await createGithubFile(
                   {
