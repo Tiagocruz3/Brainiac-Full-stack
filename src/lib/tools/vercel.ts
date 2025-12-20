@@ -293,40 +293,82 @@ export async function addVercelEnvVar(
   return { success: true };
 }
 
+// Helper function to find project by name
+async function findProjectByName(
+  projectName: string,
+  vercelKeys: ApiKeys['vercel']
+): Promise<any> {
+  console.log(`🔍 Looking for Vercel project: ${projectName}`);
+  
+  const response = await fetch(
+    `https://api.vercel.com/v9/projects${vercelKeys.teamId ? `?teamId=${vercelKeys.teamId}` : ''}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${vercelKeys.token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to list projects: ${await response.text()}`);
+  }
+
+  const data = await response.json();
+  const project = data.projects?.find((p: any) => 
+    p.name === projectName || 
+    p.name.startsWith(projectName.toLowerCase().replace(/[^a-z0-9-]/g, '-'))
+  );
+
+  if (!project) {
+    throw new Error(`Project "${projectName}" not found. Available projects: ${data.projects?.map((p: any) => p.name).join(', ')}`);
+  }
+
+  console.log(`✅ Found project: ${project.name} (ID: ${project.id})`);
+  return project;
+}
+
 export async function triggerVercelDeployment(
-  input: { project_id: string },
+  input: { project_id?: string; project_name?: string },
   vercelKeys: ApiKeys['vercel']
 ): Promise<{ success: boolean; url: string; id: string }> {
-  // Get project details to find the git repo
-  // Retry up to 3 times with delays, as newly created projects may not be immediately queryable
   let project: any;
   let lastError: any;
   
-  for (let attempt = 0; attempt < 3; attempt++) {
-    if (attempt > 0) {
-      console.log(`⏳ Retrying project fetch (attempt ${attempt + 1}/3)...`);
-      await sleep(3000); // Wait 3 seconds between retries
-    }
-    
-    const projectResponse = await fetch(
-      `https://api.vercel.com/v9/projects/${input.project_id}${vercelKeys.teamId ? `?teamId=${vercelKeys.teamId}` : ''}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${vercelKeys.token}`,
-        },
+  // If project_name is provided, find the project by name
+  if (input.project_name && !input.project_id) {
+    console.log(`🔍 Finding project by name: ${input.project_name}`);
+    project = await findProjectByName(input.project_name, vercelKeys);
+  } else if (input.project_id) {
+    // Get project details by ID (original behavior)
+    // Retry up to 3 times with delays, as newly created projects may not be immediately queryable
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) {
+        console.log(`⏳ Retrying project fetch (attempt ${attempt + 1}/3)...`);
+        await sleep(3000); // Wait 3 seconds between retries
       }
-    );
+      
+      const projectResponse = await fetch(
+        `https://api.vercel.com/v9/projects/${input.project_id}${vercelKeys.teamId ? `?teamId=${vercelKeys.teamId}` : ''}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${vercelKeys.token}`,
+          },
+        }
+      );
 
-    if (projectResponse.ok) {
-      project = await projectResponse.json();
-      break;
-    } else {
-      lastError = await projectResponse.text();
-      if (projectResponse.status === 404 && attempt < 2) {
-        // 404 might be temporary, retry
-        continue;
+      if (projectResponse.ok) {
+        project = await projectResponse.json();
+        break;
+      } else {
+        lastError = await projectResponse.text();
+        if (projectResponse.status === 404 && attempt < 2) {
+          // 404 might be temporary, retry
+          continue;
+        }
       }
     }
+  } else {
+    throw new Error('Either project_id or project_name must be provided');
   }
   
   if (!project) {
@@ -364,7 +406,7 @@ export async function triggerVercelDeployment(
       },
       body: JSON.stringify({
         name: project.name,
-        project: input.project_id,
+        project: project.id,
         target: 'production',
         gitSource: gitSource,
       }),
@@ -379,9 +421,14 @@ export async function triggerVercelDeployment(
 
   const deployment = await response.json();
 
+  // Return the production URL (project.name.vercel.app), not the deployment URL
+  const productionUrl = `${project.name}.vercel.app`;
+
+  console.log(`✅ Deployment triggered! Production URL: https://${productionUrl}`);
+
   return {
     success: true,
-    url: deployment.url,
+    url: productionUrl, // Return production URL, not deployment.url
     id: deployment.id,
   };
 }

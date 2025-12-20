@@ -75,8 +75,13 @@ You should:
 1. Use read_github_file to see the current code
 2. Make the necessary changes
 3. Use update_github_file to commit changes
-4. Use trigger_vercel_deployment to redeploy
+4. Use trigger_vercel_deployment with project_name (e.g., "my-app-name") to redeploy
 5. Explain what you changed
+
+**IMPORTANT**: When triggering redeployment after edits:
+- Use \`trigger_vercel_deployment\` with \`project_name\` parameter (the GitHub repo name)
+- DO NOT use \`project_id\` unless you have it from the initial creation
+- The tool will automatically find the project by name
 
 # QUALITY STANDARDS
 
