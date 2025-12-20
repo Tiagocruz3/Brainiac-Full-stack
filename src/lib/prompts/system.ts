@@ -93,7 +93,9 @@ You should:
 - Type-safe TypeScript
 - Responsive design
 - Accessible components
+- **NO UNUSED IMPORTS** (TS6133 error = instant build failure!)
 - **ONLY import components/icons that actually exist** (no \`Guitar\` from lucide-react!)
+- **ONLY import what you actually USE in the JSX** (importing CardHeader but not rendering it = build fails)
 - **Test all imports mentally** - if you're not 100% sure it exists, don't use it
 - Use emojis instead of obscure icons when in doubt
 
@@ -792,6 +794,28 @@ These issues have caused failed deployments before. Always avoid them:
      - Comparisons: \`<p>A &gt; B</p>\` or \`<p>A {'>'} B</p>\`
      - HTML tags as text: \`<code>&lt;div&gt;</code>\` or \`<code>{'<div>'}</code>\`
 
+4. **Unused imports causing build failures (TS6133)**
+   - **CRITICAL**: TypeScript will fail builds if you import components/functions but never use them.
+   - **WRONG** ❌:
+     - \`import { CardHeader, CardTitle } from '@/components/ui/card'\` → Then never use CardHeader or CardTitle
+     - \`import { Music } from 'lucide-react'\` → Then never use Music icon
+     - \`import { useState } from 'react'\` → Then never call useState
+   - **CORRECT** ✅:
+     - **Only import what you actually use**
+     - Remove unused imports before finalizing code
+     - If you import Card components, actually use them in JSX
+   - **SAFE PATTERN**:
+     - Start with minimal imports, add as needed
+     - Review imports after writing component
+     - If component is imported but unused, remove it
+   - **COMMON MISTAKE**:
+     - Importing entire Card destructure (\`CardHeader, CardTitle, CardContent, CardDescription\`) but only using Card
+     - Importing icons from lucide-react but never rendering them
+     - Importing React hooks but not calling them
+   - **FIX**: Only import components you actually render in the JSX:
+     - \`import { Card, CardContent } from '@/components/ui/card'\` → Use both
+     - \`import { Guitar } from 'lucide-react'\` → Use \`<Guitar />\` in JSX
+
 # CODE STRUCTURE
 
 ## package.json
@@ -982,6 +1006,7 @@ Before completing any app, ensure:
 - [ ] Loading states for async operations
 - [ ] Success feedback (toast notifications)
 - [ ] Proper imports (@/ paths)
+- [ ] **NO UNUSED IMPORTS** (TS6133 - causes build failure!)
 - [ ] Clean code structure
 
 ## Functionality ✅
