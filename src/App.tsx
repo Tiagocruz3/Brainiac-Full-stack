@@ -300,7 +300,7 @@ function App() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col md:flex-row gap-4 overflow-hidden">
         {/* Chat Column */}
-        <div className={`flex flex-col ${previewFiles ? 'md:w-1/2' : 'w-full'} transition-all duration-300`}>
+        <div className={`flex flex-col ${(previewFiles || currentDeploymentUrl) ? 'md:w-1/2' : 'w-full'} transition-all duration-300`}>
           <Chat
             messages={messages}
             onSendMessage={handleSendMessage}
@@ -312,15 +312,55 @@ function App() {
           />
         </div>
 
-        {/* Code Viewer Column */}
-        {previewFiles && currentProjectId && (
-          <div className="flex flex-col md:w-1/2 animate-in slide-in-from-right">
-            <CodeViewer
-              files={previewFiles}
-              projectName={currentProjectName || 'Generated App'}
-              deploymentUrl={currentDeploymentUrl}
-              className="h-full"
-            />
+        {/* Code Viewer + Live Preview Column */}
+        {(previewFiles || currentDeploymentUrl) && (
+          <div className="flex flex-col md:w-1/2 gap-4 animate-in slide-in-from-right overflow-hidden">
+            {/* Code Viewer */}
+            {previewFiles && currentProjectId && (
+              <div className="flex-1 min-h-0">
+                <CodeViewer
+                  files={previewFiles}
+                  projectName={currentProjectName || 'Generated App'}
+                  deploymentUrl={currentDeploymentUrl}
+                  className="h-full"
+                />
+              </div>
+            )}
+            
+            {/* Live Preview Iframe */}
+            {currentDeploymentUrl && (
+              <div className="flex-1 min-h-0 flex flex-col border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950">
+                <div className="flex items-center justify-between px-3 py-2 bg-zinc-900/50 border-b border-zinc-800">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 rounded-full bg-green-500/80 animate-pulse" />
+                    </div>
+                    <span className="text-xs font-medium text-zinc-400">Live Preview</span>
+                    <span className="text-xs text-zinc-600">·</span>
+                    <a 
+                      href={currentDeploymentUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-xs text-purple-400 hover:text-purple-300 hover:underline"
+                    >
+                      {currentDeploymentUrl.replace('https://', '')}
+                    </a>
+                  </div>
+                  <button
+                    onClick={() => window.open(currentDeploymentUrl, '_blank')}
+                    className="text-xs px-2 py-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-zinc-200 transition-colors"
+                  >
+                    Open in new tab →
+                  </button>
+                </div>
+                <iframe
+                  src={currentDeploymentUrl}
+                  className="w-full h-full bg-white"
+                  title="Live Preview"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+                />
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles } from 'lucide-react';
+import { Send, Sparkles, ChevronDown, Check } from 'lucide-react';
 import { Button } from './ui/Button';
 import { AgentMessage } from '@/types';
 import { cn } from '@/lib/utils';
@@ -20,8 +20,10 @@ interface ChatProps {
 
 export const Chat: React.FC<ChatProps> = ({ messages, onSendMessage, isBuilding, buildStatus, onStopGeneration, selectedModel = 'claude-sonnet-4-20250514', onModelChange }) => {
   const [input, setInput] = useState('');
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const availableModels = [
     { id: 'claude-sonnet-4-20250514', name: 'Claude 4 Sonnet (Latest)', description: 'Most capable model' },
@@ -40,6 +42,20 @@ export const Chat: React.FC<ChatProps> = ({ messages, onSendMessage, isBuilding,
       inputDisabled: isBuilding
     });
   }, [isBuilding, buildStatus]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsModelDropdownOpen(false);
+      }
+    };
+    
+    if (isModelDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isModelDropdownOpen]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -244,55 +260,93 @@ export const Chat: React.FC<ChatProps> = ({ messages, onSendMessage, isBuilding,
             </div>
           )}
           
-          {/* Model Selector */}
-          {onModelChange && (
-            <div className="mb-3 flex items-center gap-2">
-              <label htmlFor="model-select" className="text-xs text-zinc-400 font-medium">
-                Model:
-              </label>
-              <select
-                id="model-select"
-                value={selectedModel}
-                onChange={(e) => onModelChange(e.target.value)}
-                disabled={isBuilding}
-                className="text-xs px-3 py-1.5 rounded-lg border border-zinc-700/50 bg-zinc-900/50 text-zinc-300 focus:border-purple-500/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20 disabled:opacity-50 hover:bg-zinc-900/70 transition-colors"
-              >
-                {availableModels.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.name}
-                  </option>
-                ))}
-              </select>
-              <span className="text-xs text-zinc-500">
-                {availableModels.find(m => m.id === selectedModel)?.description}
-              </span>
-            </div>
-          )}
-          
+          {/* Claude-style Chat Input */}
           <div className="relative">
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Message Brainiac..."
-              disabled={isBuilding}
-              className="w-full resize-none rounded-3xl border border-zinc-700/50 bg-zinc-900/50 backdrop-blur-sm px-6 py-4 pr-14 text-base text-white placeholder:text-zinc-500 focus:border-purple-500/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20 disabled:opacity-50 min-h-[56px] max-h-[200px] shadow-lg"
-              rows={1}
-            />
-            <button
-              type="submit"
-              disabled={!input.trim() || isBuilding}
-              className="absolute right-2 bottom-2 h-10 w-10 rounded-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:pointer-events-none inline-flex items-center justify-center transition-all focus:outline-none"
-            >
-              {isBuilding ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              ) : (
-                <Send className="h-5 w-5" />
-              )}
-            </button>
+            {/* Model Selector Dropdown (Claude style) */}
+            {onModelChange && (
+              <div className="relative mb-2" ref={dropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+                  disabled={isBuilding}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-900/70 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="text-sm font-medium text-zinc-300">
+                    {availableModels.find(m => m.id === selectedModel)?.name}
+                  </span>
+                  <ChevronDown className={cn(
+                    "h-4 w-4 text-zinc-400 transition-transform",
+                    isModelDropdownOpen && "rotate-180"
+                  )} />
+                </button>
+                
+                {/* Dropdown Menu */}
+                {isModelDropdownOpen && (
+                  <div className="absolute bottom-full left-0 mb-2 w-80 rounded-xl border border-zinc-800 bg-zinc-900/95 backdrop-blur-xl shadow-2xl z-50 overflow-hidden">
+                    <div className="px-3 py-2 border-b border-zinc-800">
+                      <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Select Model</p>
+                    </div>
+                    <div className="py-1 max-h-96 overflow-y-auto">
+                      {availableModels.map((model) => (
+                        <button
+                          key={model.id}
+                          onClick={() => {
+                            onModelChange(model.id);
+                            setIsModelDropdownOpen(false);
+                          }}
+                          className="w-full px-3 py-2.5 hover:bg-zinc-800/50 transition-colors flex items-start gap-3 text-left"
+                        >
+                          <div className="flex-shrink-0 mt-0.5">
+                            {selectedModel === model.id && (
+                              <Check className="h-4 w-4 text-purple-400" />
+                            )}
+                            {selectedModel !== model.id && (
+                              <div className="h-4 w-4" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white truncate">{model.name}</p>
+                            <p className="text-xs text-zinc-500 mt-0.5">{model.description}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Text Input */}
+            <div className="relative">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Message Brainiac..."
+                disabled={isBuilding}
+                className="w-full resize-none rounded-2xl border border-zinc-800 bg-zinc-900/50 backdrop-blur-sm px-4 py-3 pr-12 text-base text-white placeholder:text-zinc-500 focus:border-zinc-700 focus:outline-none disabled:opacity-50 min-h-[52px] max-h-[200px] shadow-lg"
+                rows={1}
+              />
+              <button
+                type="submit"
+                disabled={!input.trim() || isBuilding}
+                className={cn(
+                  "absolute right-2 bottom-2 h-8 w-8 rounded-lg inline-flex items-center justify-center transition-all focus:outline-none",
+                  input.trim() && !isBuilding
+                    ? "bg-purple-600 hover:bg-purple-700 text-white"
+                    : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+                )}
+              >
+                {isBuilding ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </button>
+            </div>
           </div>
-          <p className="text-xs text-zinc-500 mt-3 text-center">
+          <p className="text-xs text-zinc-500 mt-2 text-center">
             Brainiac can create React apps with Supabase, GitHub, and Vercel
           </p>
         </form>
