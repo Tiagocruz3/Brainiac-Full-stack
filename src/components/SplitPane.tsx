@@ -231,11 +231,11 @@ export const SplitPane: React.FC<SplitPaneProps> = ({
 
   // Desktop view with split panes
   return (
-    <div className={cn('flex gap-4 h-full', className)}>
+    <div className={cn('flex gap-4 h-full p-4', className)}>
       {/* Chat Column */}
       <div className={cn(
-        'flex flex-col transition-all duration-300',
-        (codeContent || previewContent) ? 'md:w-1/2' : 'w-full'
+        'flex flex-col transition-all duration-300 h-full overflow-hidden',
+        (codeContent || previewContent) ? 'w-1/2' : 'w-full'
       )}>
         {chatContent}
       </div>
@@ -243,21 +243,27 @@ export const SplitPane: React.FC<SplitPaneProps> = ({
       {/* Code/Preview Column */}
       {(codeContent || previewContent) && (
         <motion.div
-          className="flex flex-col md:w-1/2 gap-4 overflow-hidden"
+          className="flex flex-col w-1/2 gap-4 h-full overflow-hidden"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3 }}
         >
           {/* Code Viewer */}
           {codeContent && (
-            <div className="flex-1 min-h-0">
+            <div className={cn(
+              'overflow-hidden rounded-lg',
+              previewContent ? 'h-1/2' : 'h-full'
+            )}>
               {codeContent}
             </div>
           )}
           
           {/* Live Preview */}
           {previewContent && (
-            <div className="flex-1 min-h-0">
+            <div className={cn(
+              'overflow-hidden rounded-lg',
+              codeContent ? 'h-1/2' : 'h-full'
+            )}>
               {previewContent}
             </div>
           )}

@@ -277,7 +277,7 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
 
   return (
     <div 
-      className={cn('h-full flex flex-col border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950', className)}
+      className={cn('h-full w-full flex flex-col border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950', className)}
       onMouseEnter={handleMouseEnter}
     >
       {/* Compact Header */}
@@ -343,28 +343,30 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
               </button>
             )}
           </div>
-          <div className="flex-1 overflow-hidden bg-[#1e1e1e] relative">
+          <div className="flex-1 overflow-hidden bg-[#1e1e1e] relative min-h-0">
             {selectedFileContent ? (
               <>
                 {/* Show typing animation with pre element for smooth updates */}
                 {isTyping ? (
-                  <div className="h-full overflow-auto p-4 font-mono text-sm text-zinc-300 whitespace-pre-wrap">
+                  <div className="absolute inset-0 overflow-auto p-4 font-mono text-sm text-zinc-300 whitespace-pre-wrap">
                     {displayedContent}
                     <span className="inline-block w-2 h-4 bg-purple-500 animate-pulse ml-0.5" />
                   </div>
                 ) : (
-                  <LazyMonacoEditor
-                    key={selectedFile} // Force remount on file change
-                    value={displayedContent || selectedFileContent}
-                    language={getMonacoLanguage(selectedFile!)}
-                    readOnly={true}
-                    className="h-full"
-                    immediate={true} // Load immediately, no delay
-                    onMount={(editor) => {
-                      editorRef.current = editor;
-                      console.log('✅ Monaco editor mounted for file:', selectedFile);
-                    }}
-                  />
+                  <div className="absolute inset-0">
+                    <LazyMonacoEditor
+                      key={selectedFile} // Force remount on file change
+                      value={displayedContent || selectedFileContent}
+                      language={getMonacoLanguage(selectedFile!)}
+                      readOnly={true}
+                      className="h-full w-full"
+                      immediate={true} // Load immediately, no delay
+                      onMount={(editor) => {
+                        editorRef.current = editor;
+                        console.log('✅ Monaco editor mounted for file:', selectedFile);
+                      }}
+                    />
+                  </div>
                 )}
                 {isTyping && (
                   <div className="absolute top-2 right-2 flex items-center gap-2 px-2 py-1 bg-purple-500/10 border border-purple-500/20 rounded text-xs text-purple-400">
@@ -374,7 +376,7 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
                 )}
               </>
             ) : (
-              <div className="h-full flex items-center justify-center text-zinc-600">
+              <div className="absolute inset-0 flex items-center justify-center text-zinc-600">
                 <div className="text-center">
                   <File className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   <p className="text-[11px]">Select a file to view</p>
