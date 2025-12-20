@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, ChevronDown, Check } from 'lucide-react';
+import { Send, Sparkles, ChevronDown, Check, Cpu } from 'lucide-react';
 import { Button } from './ui/Button';
 import { AgentMessage } from '@/types';
 import { cn } from '@/lib/utils';
@@ -18,7 +18,15 @@ interface ChatProps {
   onModelChange?: (model: string) => void;
 }
 
-export const Chat: React.FC<ChatProps> = ({ messages, onSendMessage, isBuilding, buildStatus, onStopGeneration, selectedModel = 'claude-sonnet-4-20250514', onModelChange }) => {
+export const Chat: React.FC<ChatProps> = ({ 
+  messages, 
+  onSendMessage, 
+  isBuilding, 
+  buildStatus, 
+  onStopGeneration, 
+  selectedModel = 'claude-sonnet-4-20250514', 
+  onModelChange 
+}) => {
   const [input, setInput] = useState('');
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -26,22 +34,14 @@ export const Chat: React.FC<ChatProps> = ({ messages, onSendMessage, isBuilding,
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const availableModels = [
-    { id: 'claude-sonnet-4-20250514', name: 'Claude 4 Sonnet (Latest)', description: 'Most capable model' },
-    { id: 'claude-3-7-sonnet-20250219', name: 'Claude 3.7 Sonnet', description: 'Fast and intelligent' },
-    { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet (Oct)', description: 'Previous version' },
-    { id: 'claude-3-5-sonnet-20240620', name: 'Claude 3.5 Sonnet (June)', description: 'Stable version' },
-    { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', description: 'Most powerful' },
-    { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku', description: 'Fastest and most compact' },
+    { id: 'claude-sonnet-4-20250514', name: 'Claude 4 Sonnet', badge: 'Latest', icon: '⚡' },
+    { id: 'claude-3-7-sonnet-20250219', name: 'Claude 3.7 Sonnet', badge: 'Fast', icon: '🚀' },
+    { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', badge: 'Stable', icon: '✨' },
+    { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', badge: 'Powerful', icon: '💎' },
+    { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku', badge: 'Quick', icon: '🌸' },
   ];
 
-  // Debug logging
-  useEffect(() => {
-    console.log('Chat component update:', {
-      isBuilding,
-      buildStage: buildStatus?.stage,
-      inputDisabled: isBuilding
-    });
-  }, [isBuilding, buildStatus]);
+  const currentModel = availableModels.find(m => m.id === selectedModel) || availableModels[0];
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -68,7 +68,7 @@ export const Chat: React.FC<ChatProps> = ({ messages, onSendMessage, isBuilding,
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
     }
   }, [input]);
 
@@ -78,6 +78,9 @@ export const Chat: React.FC<ChatProps> = ({ messages, onSendMessage, isBuilding,
     
     onSendMessage(input.trim());
     setInput('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -88,53 +91,49 @@ export const Chat: React.FC<ChatProps> = ({ messages, onSendMessage, isBuilding,
   };
 
   const examplePrompts = [
-    "Create a todo app with Supabase",
-    "Build a blog with authentication",
-    "Make a landing page for a SaaS product",
+    "Build a todo app with dark mode",
+    "Create a SaaS landing page",
+    "Make a portfolio website",
   ];
 
-  // Typing animation component
+  // Thinking animation
   const ThinkingIndicator = () => (
     <div className="flex items-center gap-2">
       <div className="flex items-center gap-1">
-        <span className="inline-block w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '0ms', animationDuration: '1.4s' }} />
-        <span className="inline-block w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '200ms', animationDuration: '1.4s' }} />
-        <span className="inline-block w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '400ms', animationDuration: '1.4s' }} />
+        <span className="inline-block w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
+        <span className="inline-block w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '200ms' }} />
+        <span className="inline-block w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '400ms' }} />
       </div>
-      <span className="text-xs text-zinc-400 font-medium">
+      <span className="text-xs text-zinc-400">
         {buildStatus?.stage === 'idle' ? 'Thinking...' : 'Planning...'}
       </span>
     </div>
   );
 
-  // Cursor typing animation for active thinking
-  const CursorAnimation = () => (
-    <span className="inline-block w-0.5 h-4 bg-purple-500 animate-pulse ml-0.5" />
-  );
-
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-zinc-950">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center space-y-6 px-6">
-            <div className="flex items-center space-x-2">
-              <Sparkles className="h-8 w-8 text-purple-400" />
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                Brainiac
-              </h1>
+          <div className="flex flex-col items-center justify-center h-full text-center px-6 py-12">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/25">
+                <Sparkles className="h-6 w-6 text-white" />
+              </div>
             </div>
-            <p className="text-base text-zinc-400 max-w-lg">
-              Build full-stack applications with AI in minutes
+            <h1 className="text-2xl font-bold text-white mb-2">
+              What would you like to build?
+            </h1>
+            <p className="text-sm text-zinc-500 mb-8 max-w-md">
+              I can create full-stack React applications with databases, authentication, and deployment.
             </p>
             
-            <div className="space-y-2 w-full max-w-md">
-              <p className="text-xs text-zinc-500 font-medium">Try one of these:</p>
+            <div className="flex flex-wrap gap-2 justify-center max-w-lg">
               {examplePrompts.map((prompt, i) => (
                 <button
                   key={i}
                   onClick={() => setInput(prompt)}
-                  className="w-full p-3 text-left rounded-lg border border-zinc-800/50 bg-zinc-900/30 hover:border-purple-500/30 hover:bg-zinc-900/50 transition-all text-sm text-zinc-300 hover:text-white"
+                  className="px-4 py-2 text-sm rounded-full border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800/50 hover:border-zinc-700 transition-all text-zinc-400 hover:text-white"
                 >
                   {prompt}
                 </button>
@@ -142,212 +141,205 @@ export const Chat: React.FC<ChatProps> = ({ messages, onSendMessage, isBuilding,
             </div>
           </div>
         ) : (
-          <>
+          <div className="p-4 space-y-4">
             {messages.map((message, i) => (
               <div
                 key={i}
                 className={cn(
-                  'flex animate-in fade-in duration-300',
+                  'flex animate-in fade-in-0 slide-in-from-bottom-2 duration-300',
                   message.role === 'user' ? 'justify-end' : 'justify-start'
                 )}
               >
                 <div
                   className={cn(
-                    'max-w-2xl rounded-2xl px-4 py-3',
+                    'max-w-[85%] rounded-2xl px-4 py-3',
                     message.role === 'user'
                       ? 'bg-purple-600 text-white'
                       : message.content.startsWith('⚡')
-                      ? 'bg-zinc-900/30 border border-purple-500/20 text-purple-300 text-xs px-3 py-2' // Compact step messages
-                      : 'bg-zinc-800/60 text-zinc-100'
+                      ? 'bg-zinc-900/50 border border-zinc-800 text-zinc-400 text-xs px-3 py-2'
+                      : 'bg-zinc-900 text-zinc-100'
                   )}
                 >
                   <p className={cn(
                     "whitespace-pre-wrap",
-                    message.content.startsWith('⚡') ? 'text-xs' : 'text-sm'
+                    message.content.startsWith('⚡') ? 'text-xs' : 'text-sm leading-relaxed'
                   )}>
                     {message.content}
                   </p>
                   {!message.content.startsWith('⚡') && (
-                    <p className="text-xs opacity-60 mt-1.5">
-                      {new Date(message.timestamp).toLocaleTimeString()}
+                    <p className="text-xs opacity-50 mt-2">
+                      {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   )}
                 </div>
               </div>
             ))}
             
-            {/* Thinking Animation - Shows when starting to process */}
+            {/* Thinking Animation */}
             {isBuilding && (!buildStatus || buildStatus.stage === 'idle' || buildStatus.progress === 0) && (
-              <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div className="max-w-2xl rounded-2xl px-4 py-3 bg-zinc-800/60 backdrop-blur-sm border border-purple-500/10 text-zinc-100">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0">
-                      <Sparkles className="h-4 w-4 text-purple-400 animate-pulse" />
-                    </div>
+              <div className="flex justify-start animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+                <div className="bg-zinc-900 rounded-2xl px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-purple-400 animate-pulse" />
                     <ThinkingIndicator />
-                    <CursorAnimation />
                   </div>
                 </div>
               </div>
             )}
             
-            {/* Compact Build Status */}
+            {/* Build Progress */}
             {isBuilding && buildStatus && buildStatus.stage !== 'idle' && buildStatus.progress > 0 && (
               <div className="flex justify-start">
-                <div className="max-w-2xl w-full rounded-xl px-4 py-3 bg-gradient-to-br from-purple-900/10 to-zinc-900/30 border border-purple-500/20 backdrop-blur-sm shadow-lg shadow-purple-500/5 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex-shrink-0">
-                      {buildStatus.stage === 'complete' ? (
-                        <div className="h-8 w-8 rounded-full bg-green-500/10 flex items-center justify-center animate-in zoom-in duration-300">
-                          <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      ) : buildStatus.stage === 'error' ? (
-                        <div className="h-8 w-8 rounded-full bg-red-500/10 flex items-center justify-center">
-                          <svg className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </div>
-                      ) : (
-                        <div className="h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center relative">
-                          <div className="absolute inset-0 rounded-full bg-purple-500/10 animate-ping" />
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-purple-500 border-t-transparent" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white mb-1.5 animate-in fade-in slide-in-from-left-1 duration-300">
-                        {buildStatus.message}
-                        <span className="inline-block w-0.5 h-3.5 bg-purple-400 animate-pulse ml-1" />
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 bg-zinc-800/50 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 transition-all duration-700 ease-out relative"
-                            style={{ width: `${buildStatus.progress}%` }}
-                          >
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
-                          </div>
-                        </div>
-                        <span className="text-xs text-purple-400 font-medium min-w-[3ch] text-right tabular-nums">
-                          {buildStatus.progress}%
-                        </span>
+                <div className="max-w-md w-full bg-zinc-900 rounded-2xl p-4 border border-zinc-800 animate-in fade-in-0 duration-300">
+                  <div className="flex items-center gap-3 mb-3">
+                    {buildStatus.stage === 'complete' ? (
+                      <div className="h-8 w-8 rounded-full bg-green-500/10 flex items-center justify-center">
+                        <Check className="h-4 w-4 text-green-500" />
                       </div>
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center relative">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-purple-500 border-t-transparent" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-white">{buildStatus.message}</p>
                     </div>
+                    <span className="text-sm text-purple-400 font-mono">{buildStatus.progress}%</span>
+                  </div>
+                  <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
+                      style={{ width: `${buildStatus.progress}%` }}
+                    />
                   </div>
                 </div>
               </div>
             )}
-          </>
+            <div ref={messagesEndRef} />
+          </div>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="p-6 bg-transparent">
+      {/* Claude-style Input Bar */}
+      <div className="p-4 border-t border-zinc-900">
         <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+          {/* Stop Button */}
           {isBuilding && onStopGeneration && (
-            <div className="mb-4 flex justify-center">
+            <div className="mb-3 flex justify-center">
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
                 onClick={onStopGeneration}
-                className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:border-red-500"
+                className="border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-600"
               >
-                Stop Generating
+                Stop generating
               </Button>
             </div>
           )}
           
-          {/* Claude-style Chat Input */}
-          <div className="relative">
-            {/* Model Selector Dropdown (Claude style) */}
-            {onModelChange && (
-              <div className="relative mb-2" ref={dropdownRef}>
+          {/* Input Container */}
+          <div className="relative bg-zinc-900 rounded-2xl border border-zinc-800 focus-within:border-zinc-700 transition-colors">
+            {/* Textarea */}
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Message Brainiac..."
+              disabled={isBuilding}
+              className="w-full resize-none bg-transparent px-4 pt-4 pb-12 text-sm text-white placeholder:text-zinc-500 focus:outline-none disabled:opacity-50 min-h-[56px] max-h-[200px]"
+              rows={1}
+            />
+            
+            {/* Bottom Bar - Model Selector + Send */}
+            <div className="absolute bottom-0 left-0 right-0 px-3 py-2 flex items-center justify-between">
+              {/* Model Selector */}
+              <div className="relative" ref={dropdownRef}>
                 <button
                   type="button"
-                  onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+                  onClick={() => !isBuilding && setIsModelDropdownOpen(!isModelDropdownOpen)}
                   disabled={isBuilding}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-900/70 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={cn(
+                    "flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs transition-colors",
+                    isBuilding 
+                      ? "text-zinc-600 cursor-not-allowed" 
+                      : "text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800"
+                  )}
                 >
-                  <span className="text-sm font-medium text-zinc-300">
-                    {availableModels.find(m => m.id === selectedModel)?.name}
-                  </span>
+                  <Cpu className="h-3.5 w-3.5" />
+                  <span className="font-medium">{currentModel.name}</span>
                   <ChevronDown className={cn(
-                    "h-4 w-4 text-zinc-400 transition-transform",
+                    "h-3 w-3 transition-transform",
                     isModelDropdownOpen && "rotate-180"
                   )} />
                 </button>
                 
-                {/* Dropdown Menu */}
+                {/* Dropdown */}
                 {isModelDropdownOpen && (
-                  <div className="absolute bottom-full left-0 mb-2 w-80 rounded-xl border border-zinc-800 bg-zinc-900/95 backdrop-blur-xl shadow-2xl z-50 overflow-hidden">
-                    <div className="px-3 py-2 border-b border-zinc-800">
-                      <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Select Model</p>
-                    </div>
-                    <div className="py-1 max-h-96 overflow-y-auto">
+                  <div className="absolute bottom-full left-0 mb-2 w-64 rounded-xl border border-zinc-800 bg-zinc-900 shadow-xl z-50 overflow-hidden animate-in fade-in-0 slide-in-from-bottom-2 duration-200">
+                    <div className="p-2 space-y-0.5">
                       {availableModels.map((model) => (
                         <button
                           key={model.id}
                           onClick={() => {
-                            onModelChange(model.id);
+                            onModelChange?.(model.id);
                             setIsModelDropdownOpen(false);
                           }}
-                          className="w-full px-3 py-2.5 hover:bg-zinc-800/50 transition-colors flex items-start gap-3 text-left"
+                          className={cn(
+                            "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left",
+                            selectedModel === model.id 
+                              ? "bg-purple-500/10 text-white" 
+                              : "hover:bg-zinc-800 text-zinc-400 hover:text-white"
+                          )}
                         >
-                          <div className="flex-shrink-0 mt-0.5">
-                            {selectedModel === model.id && (
-                              <Check className="h-4 w-4 text-purple-400" />
-                            )}
-                            {selectedModel !== model.id && (
-                              <div className="h-4 w-4" />
-                            )}
-                          </div>
+                          <span className="text-base">{model.icon}</span>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white truncate">{model.name}</p>
-                            <p className="text-xs text-zinc-500 mt-0.5">{model.description}</p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">{model.name}</span>
+                              <span className={cn(
+                                "text-[10px] px-1.5 py-0.5 rounded-full",
+                                selectedModel === model.id 
+                                  ? "bg-purple-500/20 text-purple-300" 
+                                  : "bg-zinc-800 text-zinc-500"
+                              )}>
+                                {model.badge}
+                              </span>
+                            </div>
                           </div>
+                          {selectedModel === model.id && (
+                            <Check className="h-4 w-4 text-purple-400 flex-shrink-0" />
+                          )}
                         </button>
                       ))}
                     </div>
                   </div>
                 )}
               </div>
-            )}
-            
-            {/* Text Input */}
-            <div className="relative">
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Message Brainiac..."
-                disabled={isBuilding}
-                className="w-full resize-none rounded-2xl border border-zinc-800 bg-zinc-900/50 backdrop-blur-sm px-4 py-3 pr-12 text-base text-white placeholder:text-zinc-500 focus:border-zinc-700 focus:outline-none disabled:opacity-50 min-h-[52px] max-h-[200px] shadow-lg"
-                rows={1}
-              />
+              
+              {/* Send Button */}
               <button
                 type="submit"
                 disabled={!input.trim() || isBuilding}
                 className={cn(
-                  "absolute right-2 bottom-2 h-8 w-8 rounded-lg inline-flex items-center justify-center transition-all focus:outline-none",
+                  "h-8 w-8 rounded-lg flex items-center justify-center transition-all",
                   input.trim() && !isBuilding
-                    ? "bg-purple-600 hover:bg-purple-700 text-white"
-                    : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+                    ? "bg-white text-black hover:bg-zinc-200"
+                    : "bg-zinc-800 text-zinc-600 cursor-not-allowed"
                 )}
               >
                 {isBuilding ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-500 border-t-transparent" />
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
               </button>
             </div>
           </div>
-          <p className="text-xs text-zinc-500 mt-2 text-center">
-            Brainiac can create React apps with Supabase, GitHub, and Vercel
+          
+          {/* Footer */}
+          <p className="text-[11px] text-zinc-600 mt-2 text-center">
+            Press Enter to send • Shift+Enter for new line
           </p>
         </form>
       </div>
