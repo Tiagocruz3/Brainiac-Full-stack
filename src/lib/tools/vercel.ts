@@ -58,7 +58,6 @@ export async function createVercelProject(
 
   // Now create deployment with repoId
   let projectId: string;
-  let deploymentUrl: string;
   let deploymentId: string | undefined;
 
   try {
@@ -114,16 +113,36 @@ export async function createVercelProject(
         
         const retryData = await retryResponse.json();
         projectId = retryData.projectId;
-        deploymentUrl = retryData.url;
-      deploymentId = retryData.id;
+        deploymentId = retryData.id;
       } else {
         throw new Error(`Failed to create Vercel project: ${error}`);
       }
     } else {
       const deployment = await response.json();
       projectId = deployment.projectId;
-      deploymentUrl = deployment.url;
       deploymentId = deployment.id;
+    }
+
+    // IMPORTANT: Fetch the actual project to get the REAL name Vercel assigned
+    // (Vercel may add suffix like -green, -gules, etc. if name conflicts)
+    let actualProjectName = input.name;
+    try {
+      console.log('🔍 Fetching actual Vercel project name...');
+      const projectCheckResponse = await fetch(
+        `https://api.vercel.com/v9/projects/${projectId}${vercelKeys.teamId ? `?teamId=${vercelKeys.teamId}` : ''}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${vercelKeys.token}`,
+          },
+        }
+      );
+      if (projectCheckResponse.ok) {
+        const projectData = await projectCheckResponse.json();
+        actualProjectName = projectData.name;
+        console.log(`✅ Actual Vercel project name: ${actualProjectName} (requested: ${input.name})`);
+      }
+    } catch (e) {
+      console.log(`⚠️ Could not verify project name, using: ${actualProjectName}`);
     }
 
     // Poll deployment status (but don't wait too long)
@@ -151,11 +170,11 @@ export async function createVercelProject(
       attempts++;
     }
 
-    // Return even if still building (user can check later)
+    // Return the ACTUAL project URL (may include Vercel suffix like -green)
     return {
       id: projectId,
-      name: input.name,
-      url: deploymentUrl,
+      name: actualProjectName,
+      url: `${actualProjectName}.vercel.app`,
     };
   } catch (error: any) {
     console.error('Vercel deployment error:', error);
