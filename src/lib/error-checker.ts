@@ -7,8 +7,8 @@
 
 export interface ErrorPattern {
   id: string;
-  category: 'typescript' | 'react' | 'tailwind' | 'import' | 'jsx';
-  pattern: RegExp;
+  category: 'typescript' | 'react' | 'tailwind' | 'import' | 'jsx' | 'env';
+  pattern: RegExp | null; // null for file-level checks
   description: string;
   severity: 'error' | 'warning';
   examples: string[];
@@ -333,6 +333,123 @@ const tailwindErrors: ErrorPattern[] = [
 ];
 
 // =============================================================================
+// CATEGORY 4: ENVIRONMENT VARIABLE ERRORS
+// =============================================================================
+
+const envErrors: ErrorPattern[] = [
+  {
+    id: 'missing-vite-prefix',
+    category: 'env',
+    pattern: /process\.env\.(?!VITE_)/,
+    description: 'Environment variable missing VITE_ prefix (Vite requirement)',
+    severity: 'error',
+    examples: [
+      '❌ process.env.SUPABASE_URL',
+      '✅ import.meta.env.VITE_SUPABASE_URL',
+    ],
+    autoFix: (code) => {
+      return code
+        .replace(/process\.env\.([A-Z_]+)/g, 'import.meta.env.VITE_$1')
+        .replace(/import\.meta\.env\.VITE_VITE_/g, 'import.meta.env.VITE_');
+    }
+  },
+  {
+    id: 'wrong-env-access',
+    category: 'env',
+    pattern: /process\.env\./,
+    description: 'Using process.env instead of import.meta.env in Vite',
+    severity: 'error',
+    examples: [
+      '❌ process.env.VITE_API_KEY',
+      '✅ import.meta.env.VITE_API_KEY',
+    ],
+    autoFix: (code) => {
+      return code.replace(/process\.env\./g, 'import.meta.env.');
+    }
+  },
+  {
+    id: 'hardcoded-supabase-url',
+    category: 'env',
+    pattern: /["'](https:\/\/[a-z0-9]+\.supabase\.co)["']/i,
+    description: 'Hardcoded Supabase URL - should use env var',
+    severity: 'error',
+    examples: [
+      '❌ const url = "https://abc123.supabase.co"',
+      '✅ const url = import.meta.env.VITE_SUPABASE_URL',
+    ],
+    autoFix: (code) => {
+      return code.replace(
+        /["'](https:\/\/[a-z0-9]+\.supabase\.co)["']/gi,
+        'import.meta.env.VITE_SUPABASE_URL'
+      );
+    }
+  },
+  {
+    id: 'hardcoded-api-key',
+    category: 'env',
+    pattern: /["'](sk_live_[a-zA-Z0-9]+|pk_live_[a-zA-Z0-9]+|ghp_[a-zA-Z0-9]+|eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+)["']/,
+    description: 'Hardcoded API key or secret detected',
+    severity: 'error',
+    examples: [
+      '❌ const key = "sk_live_abc123..."',
+      '✅ const key = import.meta.env.VITE_SECRET_KEY',
+    ],
+    autoFix: (code, match) => {
+      if (!match) return code;
+      const secret = match[1];
+      
+      // Detect type of secret and suggest appropriate env var
+      if (secret.startsWith('sk_live_') || secret.startsWith('pk_live_')) {
+        return code.replace(
+          new RegExp(`["']${secret}["']`, 'g'),
+          'import.meta.env.VITE_STRIPE_KEY'
+        );
+      }
+      if (secret.startsWith('ghp_')) {
+        return code.replace(
+          new RegExp(`["']${secret}["']`, 'g'),
+          'import.meta.env.VITE_GITHUB_TOKEN'
+        );
+      }
+      if (secret.startsWith('eyJ')) {
+        // JWT token - likely Supabase anon key
+        return code.replace(
+          new RegExp(`["']${secret.substring(0, 20)}[^"']*["']`, 'g'),
+          'import.meta.env.VITE_SUPABASE_ANON_KEY'
+        );
+      }
+      return code;
+    }
+  },
+  {
+    id: 'next-public-prefix',
+    category: 'env',
+    pattern: /NEXT_PUBLIC_/,
+    description: 'Using Next.js env prefix in Vite project',
+    severity: 'error',
+    examples: [
+      '❌ import.meta.env.NEXT_PUBLIC_API_URL',
+      '✅ import.meta.env.VITE_API_URL',
+    ],
+    autoFix: (code) => {
+      return code.replace(/NEXT_PUBLIC_/g, 'VITE_');
+    }
+  },
+  {
+    id: 'env-undefined-check',
+    category: 'env',
+    pattern: /import\.meta\.env\.\w+\s*[!=]==?\s*(undefined|null)/,
+    description: 'Env var might be empty string, not undefined',
+    severity: 'warning',
+    examples: [
+      '❌ if (import.meta.env.VITE_KEY === undefined)',
+      '✅ if (!import.meta.env.VITE_KEY)',
+    ],
+    autoFix: null // Logic change needed
+  },
+];
+
+// =============================================================================
 // ALL ERROR PATTERNS
 // =============================================================================
 
@@ -342,6 +459,7 @@ export const ALL_ERROR_PATTERNS: ErrorPattern[] = [
   ...importExportErrors,
   ...reactErrors,
   ...tailwindErrors,
+  ...envErrors,
 ];
 
 // =============================================================================
@@ -355,6 +473,9 @@ export function detectErrorsFromBuildOutput(buildOutput: string): DetectedError[
   const errors: DetectedError[] = [];
   
   for (const pattern of ALL_ERROR_PATTERNS) {
+    // Skip patterns without regex (file-level checks)
+    if (!pattern.pattern) continue;
+    
     const match = buildOutput.match(pattern.pattern);
     if (match) {
       // Try to extract line number
@@ -421,6 +542,47 @@ export function preCheckCode(code: string, fileName: string): DetectedError[] {
     }
   }
   
+  // Check for environment variable issues (all files)
+  // Check for process.env usage (should be import.meta.env in Vite)
+  if (code.includes('process.env.')) {
+    errors.push({
+      id: 'wrong-env-access',
+      message: 'Using process.env instead of import.meta.env (Vite uses import.meta.env)',
+      severity: 'error',
+      canAutoFix: true,
+    });
+  }
+  
+  // Check for NEXT_PUBLIC_ prefix (wrong framework)
+  if (code.includes('NEXT_PUBLIC_')) {
+    errors.push({
+      id: 'next-public-prefix',
+      message: 'Using NEXT_PUBLIC_ prefix - should be VITE_ for Vite projects',
+      severity: 'error',
+      canAutoFix: true,
+    });
+  }
+  
+  // Check for hardcoded Supabase URLs
+  if (/["'](https:\/\/[a-z0-9]+\.supabase\.co)["']/i.test(code)) {
+    errors.push({
+      id: 'hardcoded-supabase-url',
+      message: 'Hardcoded Supabase URL detected - use import.meta.env.VITE_SUPABASE_URL',
+      severity: 'error',
+      canAutoFix: true,
+    });
+  }
+  
+  // Check for hardcoded API keys
+  if (/["'](sk_live_|pk_live_|ghp_|eyJhbGciOi)/.test(code)) {
+    errors.push({
+      id: 'hardcoded-api-key',
+      message: 'Hardcoded API key or secret detected - use environment variables',
+      severity: 'error',
+      canAutoFix: true,
+    });
+  }
+  
   return errors;
 }
 
@@ -464,6 +626,7 @@ export function generateErrorKnowledgeBase(): string {
     'Imports/Exports': importExportErrors,
     'React': reactErrors,
     'Tailwind': tailwindErrors,
+    'Environment Variables': envErrors,
   };
   
   let summary = '# PRE-DEPLOYMENT ERROR CHECKLIST\n\n';
