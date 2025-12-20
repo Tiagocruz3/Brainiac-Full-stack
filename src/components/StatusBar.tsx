@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, CheckCircle2, XCircle, Database, Code, Rocket } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Database, Code, Rocket, FileSearch, Shield, Wrench, AlertTriangle } from 'lucide-react';
 import { BuildStatus } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -11,14 +11,24 @@ export const StatusBar: React.FC<StatusBarProps> = ({ status }) => {
   if (status.stage === 'idle') return null;
 
   const getIcon = () => {
-    if (status.stage === 'error') return <XCircle className="h-5 w-5 text-red-500" />;
+    if (status.stage === 'error' || status.stage === 'error_blocked') return <XCircle className="h-5 w-5 text-red-500" />;
     if (status.stage === 'complete') return <CheckCircle2 className="h-5 w-5 text-green-500" />;
     
     switch (status.stage) {
+      case 'preparing':
+        return <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />;
+      case 'error_check':
+        return <FileSearch className="h-5 w-5 text-cyan-500 animate-pulse" />;
+      case 'auto_fix':
+        return <Wrench className="h-5 w-5 text-yellow-500 animate-pulse" />;
+      case 'security_scan':
+        return <Shield className="h-5 w-5 text-purple-500 animate-pulse" />;
+      case 'waiting':
+        return <AlertTriangle className="h-5 w-5 text-orange-500 animate-pulse" />;
       case 'creating_supabase':
       case 'waiting_provisioning':
       case 'getting_keys':
-        return <Database className="h-5 w-5 text-purple-500 animate-pulse" />;
+        return <Database className="h-5 w-5 text-emerald-500 animate-pulse" />;
       case 'creating_repo':
         return <Code className="h-5 w-5 text-blue-500 animate-pulse" />;
       case 'deploying':
@@ -30,6 +40,16 @@ export const StatusBar: React.FC<StatusBarProps> = ({ status }) => {
 
   const getStageText = () => {
     switch (status.stage) {
+      case 'preparing':
+        return 'Planning your application...';
+      case 'error_check':
+        return 'Running pre-deployment checks...';
+      case 'auto_fix':
+        return 'Auto-fixing issues...';
+      case 'security_scan':
+        return 'Scanning for vulnerabilities...';
+      case 'error_blocked':
+        return '⚠️ Critical errors found';
       case 'creating_supabase':
         return 'Creating Supabase project...';
       case 'waiting_provisioning':
@@ -44,6 +64,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({ status }) => {
         return '🎉 Build complete!';
       case 'error':
         return '❌ Build failed';
+      case 'waiting':
+        return '⏳ Rate limited, waiting...';
       default:
         return 'Building...';
     }

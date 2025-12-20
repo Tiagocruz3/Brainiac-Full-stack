@@ -41,7 +41,7 @@ export interface SupabaseProject {
 }
 
 export interface BuildStatus {
-  stage: 'idle' | 'creating_supabase' | 'waiting_provisioning' | 'getting_keys' | 'creating_repo' | 'deploying' | 'complete' | 'error';
+  stage: 'idle' | 'preparing' | 'creating_supabase' | 'waiting_provisioning' | 'getting_keys' | 'creating_repo' | 'deploying' | 'complete' | 'error' | 'error_check' | 'auto_fix' | 'security_scan' | 'error_blocked' | 'waiting';
   message: string;
   progress: number;
   error?: string;

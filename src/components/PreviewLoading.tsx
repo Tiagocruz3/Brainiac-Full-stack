@@ -66,6 +66,12 @@ const stageConfig: Record<string, { icon: React.ReactNode; color: string; bgColo
     bgColor: 'bg-orange-500/10 border-orange-500/20',
     label: 'Waiting' 
   },
+  creating_supabase: { 
+    icon: <Settings className="w-4 h-4" />, 
+    color: 'text-emerald-400', 
+    bgColor: 'bg-emerald-500/10 border-emerald-500/20',
+    label: 'Creating Database' 
+  },
 };
 
 export const PreviewLoading: React.FC<PreviewLoadingProps> = ({

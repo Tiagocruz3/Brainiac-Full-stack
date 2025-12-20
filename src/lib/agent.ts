@@ -312,7 +312,7 @@ export async function runAgent(
       dangerouslyAllowBrowser: true, // Allow browser usage
     });
 
-    onProgress('creating_supabase', 'Planning your application...', 5);
+    onProgress('preparing', 'Planning your application...', 5);
 
     // Define tools for the agent
     const tools: Anthropic.Tool[] = [
