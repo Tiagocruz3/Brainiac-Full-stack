@@ -5,11 +5,12 @@
  * Similar to v0.dev and bolt.new
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { File, Folder, FolderOpen, Copy, Check, ExternalLink } from 'lucide-react';
 import { Button } from './ui/Button';
 import { cn } from '@/lib/utils';
-import Editor from '@monaco-editor/react';
+import { LazyMonacoEditor, useMonacoPreload } from './LazyMonacoEditor';
+import { usePerformanceMonitor } from '@/hooks/usePreviewOptimization';
 
 export interface CodeViewerProps {
   files: Record<string, string>;
@@ -38,6 +39,12 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
   const [displayedContent, setDisplayedContent] = useState<string>('');
   const [isTyping, setIsTyping] = useState(false);
   const [animatedFiles, setAnimatedFiles] = useState<Set<string>>(new Set());
+  
+  // Optimization hooks
+  const { preload: preloadMonaco } = useMonacoPreload();
+  const performanceMonitor = usePerformanceMonitor('CodeViewer');
+  const editorRef = useRef<any>(null);
+  const typingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Build file tree from flat file list
   const buildFileTree = (files: Record<string, string>): FileNode => {
@@ -230,8 +237,49 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
     };
   }, [selectedFileContent, selectedFile, animatedFiles]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    console.log('🎨 CodeViewer mounted');
+    performanceMonitor.start();
+
+    return () => {
+      console.log('🧹 CodeViewer unmounting - cleaning up resources...');
+      
+      // Dispose Monaco editor
+      if (editorRef.current) {
+        try {
+          editorRef.current.dispose();
+          console.log('✅ Monaco editor disposed');
+        } catch (error) {
+          console.error('❌ Error disposing Monaco editor:', error);
+        }
+      }
+      
+      // Clear typing timer
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current);
+        typingTimerRef.current = null;
+      }
+      
+      // Clear state
+      setDisplayedContent('');
+      setAnimatedFiles(new Set());
+      
+      performanceMonitor.end();
+      console.log('✅ CodeViewer cleanup complete');
+    };
+  }, [performanceMonitor]);
+
+  // Preload Monaco on hover for better UX
+  const handleMouseEnter = () => {
+    preloadMonaco();
+  };
+
   return (
-    <div className={cn('h-full flex flex-col border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950', className)}>
+    <div 
+      className={cn('h-full flex flex-col border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950', className)}
+      onMouseEnter={handleMouseEnter}
+    >
       {/* Compact Header */}
       <div className="flex items-center justify-between px-3 py-2 bg-zinc-900/50 border-b border-zinc-800">
         <div className="flex items-center gap-2">
@@ -298,38 +346,15 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
           <div className="flex-1 overflow-hidden bg-[#1e1e1e] relative">
             {selectedFileContent ? (
               <>
-                <Editor
-                  height="100%"
-                  language={getMonacoLanguage(selectedFile!)}
+                <LazyMonacoEditor
                   value={displayedContent}
-                  theme="vs-dark"
-                  options={{
-                    readOnly: true,
-                    minimap: { enabled: false },
-                    fontSize: 12,
-                    lineNumbers: 'on',
-                    scrollBeyondLastLine: false,
-                    wordWrap: 'on',
-                    automaticLayout: true,
-                    padding: { top: 12, bottom: 12 },
-                    scrollbar: {
-                      vertical: 'auto',
-                      horizontal: 'auto',
-                      verticalScrollbarSize: 10,
-                      horizontalScrollbarSize: 10,
-                    },
-                    renderLineHighlight: 'none',
-                    overviewRulerBorder: false,
-                    hideCursorInOverviewRuler: true,
-                    overviewRulerLanes: 0,
-                    cursorStyle: isTyping ? 'line' : 'line-thin',
-                    cursorBlinking: isTyping ? 'blink' : 'solid',
+                  language={getMonacoLanguage(selectedFile!)}
+                  readOnly={true}
+                  className="h-full"
+                  onMount={(editor) => {
+                    editorRef.current = editor;
+                    console.log('✅ Monaco editor mounted for file:', selectedFile);
                   }}
-                  loading={
-                    <div className="h-full flex items-center justify-center text-zinc-500">
-                      <div className="animate-spin h-8 w-8 border-2 border-purple-500 border-t-transparent rounded-full" />
-                    </div>
-                  }
                 />
                 {isTyping && (
                   <div className="absolute top-2 right-2 flex items-center gap-2 px-2 py-1 bg-purple-500/10 border border-purple-500/20 rounded text-xs text-purple-400">

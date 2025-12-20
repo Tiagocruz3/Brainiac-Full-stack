@@ -15,6 +15,8 @@ import { hasValidSettings, loadHistory, loadSettings, saveProject } from './lib/
 import { generateId } from './lib/utils';
 import { runAgent } from './lib/agent';
 import { previewErrorHandler, PreviewError as PreviewErrorType } from './lib/preview-errors';
+import { previewManager } from './lib/preview-manager';
+import { usePreviewOptimization, usePerformanceMonitor } from './hooks/usePreviewOptimization';
 
 function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -40,6 +42,26 @@ function App() {
   const [filesGenerated, setFilesGenerated] = useState<number>(0);
   const [totalFiles, setTotalFiles] = useState<number>(0);
   const [previewError, setPreviewError] = useState<PreviewErrorType | null>(null);
+
+  // Performance optimization hooks
+  const previewOptimization = usePreviewOptimization({
+    debounceDelay: 500,
+    throttleDelay: 1000,
+    maxFileSize: 5 * 1024 * 1024, // 5MB
+  });
+  const performanceMonitor = usePerformanceMonitor('App');
+
+  useEffect(() => {
+    console.log('🚀 Brainiac App mounted');
+    performanceMonitor.start();
+
+    return () => {
+      console.log('🧹 Brainiac App unmounting - cleaning up...');
+      previewOptimization.cleanup();
+      previewManager.dispose();
+      performanceMonitor.end();
+    };
+  }, [previewOptimization, performanceMonitor]);
 
   useEffect(() => {
     // Check if settings exist on mount
@@ -139,15 +161,44 @@ function App() {
         conversationHistory.length > 0 ? conversationHistory : undefined,
         controller.signal, // ← Pass abort signal!
         selectedModel, // ← Pass selected model!
-        // 🎬 File update callback for live preview!
+        // 🎬 File update callback for live preview with optimization!
         (files) => {
-          console.log('🎬 Received files for preview:', Object.keys(files));
-          const fileCount = Object.keys(files).length;
-          setFilesGenerated(fileCount);
-          setPreviewFiles(files);
-          if (fileCount >= totalFiles) {
-            addStepMessage('🎬 All files generated!');
+          // Validate file sizes
+          const validation = previewOptimization.validateFileSize(files);
+          if (!validation.valid) {
+            console.warn('⚠️ Some files exceed size limit:', validation.oversized);
           }
+
+          // Calculate memory usage
+          const memoryUsage = previewOptimization.estimateMemoryUsage(files);
+          console.log(`💾 Preview memory estimate: ${(memoryUsage / 1024 / 1024).toFixed(2)}MB`);
+
+          // Debounce file updates to avoid excessive re-renders
+          previewOptimization.debounceFileUpdate(files, (debouncedFiles) => {
+            console.log('🎬 Received files for preview:', Object.keys(debouncedFiles));
+            const fileCount = Object.keys(debouncedFiles).length;
+            setFilesGenerated(fileCount);
+            
+            // Only update if files actually changed
+            if (previewOptimization.shouldRebuild(debouncedFiles)) {
+              setPreviewFiles(debouncedFiles);
+              
+              // Create preview instance
+              previewManager.createPreview(
+                projectId,
+                currentProjectName || 'Generated App',
+                debouncedFiles
+              ).then(({ success, error }) => {
+                if (!success && error) {
+                  setPreviewError(error);
+                }
+              });
+            }
+            
+            if (fileCount >= totalFiles) {
+              addStepMessage('🎬 All files generated!');
+            }
+          });
         }
       );
 
@@ -289,6 +340,11 @@ function App() {
   const handleClearCacheAndRetry = () => {
     console.log('🗑️ Clearing cache and retrying...');
     
+    // Destroy current preview instance
+    if (currentProjectId) {
+      previewManager.destroyPreview(currentProjectId);
+    }
+    
     // Clear all preview-related state
     setPreviewFiles(null);
     setPreviewError(null);
@@ -303,6 +359,31 @@ function App() {
       handleRetryPreview();
     }, 500);
   };
+
+  // Cleanup old preview when starting new project
+  useEffect(() => {
+    return () => {
+      if (currentProjectId) {
+        console.log('🧹 Cleaning up preview for project:', currentProjectId);
+        previewManager.destroyPreview(currentProjectId);
+      }
+    };
+  }, [currentProjectId]);
+
+  // Log preview manager status periodically (development only)
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      const interval = setInterval(() => {
+        const status = previewManager.getStatus();
+        console.log('📊 Preview Manager Status:', {
+          instances: `${status.instanceCount}/${status.maxInstances}`,
+          memory: `${(status.totalMemory / 1024 / 1024).toFixed(2)}MB / ${(status.maxMemory / 1024 / 1024).toFixed(2)}MB`,
+        });
+      }, 60000); // Every minute
+
+      return () => clearInterval(interval);
+    }
+  }, []);
 
   return (
     <div className="flex h-screen bg-black text-white">
