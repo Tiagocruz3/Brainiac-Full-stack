@@ -94,6 +94,8 @@ You should:
 - Responsive design
 - Accessible components
 - **NO UNUSED IMPORTS** (TS6133 error = instant build failure!)
+- **NEVER use template literals (backticks) in className** (TS1005 error = instant build failure!)
+- **ALWAYS use cn() utility for conditional classes** (already imported in templates)
 - **ONLY import components/icons that actually exist** (no \`Guitar\` from lucide-react!)
 - **ONLY import what you actually USE in the JSX** (importing CardHeader but not rendering it = build fails)
 - **Test all imports mentally** - if you're not 100% sure it exists, don't use it
@@ -314,7 +316,7 @@ Create sophisticated, professional layouts using these proven patterns:
       { title: 'Feature 1', desc: 'Description...', image: '🎨' },
       { title: 'Feature 2', desc: 'Description...', image: '🚀' }
     ].map((feature, idx) => (
-      <div key={feature.title} className={\`grid md:grid-cols-2 gap-16 items-center mb-32 \${idx % 2 === 1 ? 'md:grid-flow-col-dense' : ''}\`}>
+      <div key={feature.title} className={cn('grid md:grid-cols-2 gap-16 items-center mb-32', idx % 2 === 1 && 'md:grid-flow-col-dense')}>
         <div className={idx % 2 === 1 ? 'md:col-start-2' : ''}>
           <h3 className="text-4xl font-bold mb-4">{feature.title}</h3>
           <p className="text-xl text-zinc-400 mb-6">{feature.desc}</p>
@@ -347,7 +349,7 @@ Create sophisticated, professional layouts using these proven patterns:
         { name: 'Pro', price: '$29', features: ['Everything in Starter', 'Feature 4', 'Feature 5', 'Priority support'], popular: true },
         { name: 'Enterprise', price: '$99', features: ['Everything in Pro', 'Feature 6', 'Feature 7', 'Dedicated support'], popular: false }
       ].map((plan) => (
-        <Card key={plan.name} className={\`relative \${plan.popular ? 'border-purple-500 shadow-lg shadow-purple-500/20 scale-105' : 'border-zinc-800'} bg-zinc-900/50\`}>
+        <Card key={plan.name} className={cn('relative bg-zinc-900/50', plan.popular ? 'border-purple-500 shadow-lg shadow-purple-500/20 scale-105' : 'border-zinc-800')}>
           {plan.popular && (
             <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full text-sm font-bold">
               Most Popular
@@ -816,6 +818,32 @@ These issues have caused failed deployments before. Always avoid them:
      - \`import { Card, CardContent } from '@/components/ui/card'\` → Use both
      - \`import { Guitar } from 'lucide-react'\` → Use \`<Guitar />\` in JSX
 
+5. **Template literal syntax errors in className (TS1005)**
+   - **CRITICAL**: Incorrectly escaped template literals in className cause TypeScript parsing errors.
+   - **WRONG** ❌:
+     - \`className={\\\`text-white \\\${isActive ? 'font-bold' : ''}\\\`}\` → Escaping issues in templates
+     - \`className={\\\`\\\${condition ? 'class-a' : 'class-b'}\\\`}\` → Parser confusion
+     - Using \\\` backticks inside \`{ }\` with \\\$ interpolation can break TypeScript parser
+   - **CORRECT** ✅ (Use these patterns instead):
+     - **Pattern 1 - String concatenation**:
+       - \`className={'text-white ' + (isActive ? 'font-bold' : '')}\`
+     - **Pattern 2 - Array join**:
+       - \`className={['text-white', isActive && 'font-bold'].filter(Boolean).join(' ')}\`
+     - **Pattern 3 - cn() utility** (RECOMMENDED):
+       - \`className={cn('text-white', isActive && 'font-bold')}\`
+       - Already imported in all templates: \`import { cn } from '@/lib/utils'\`
+     - **Pattern 4 - Ternary without template literal**:
+       - \`className={condition ? 'class-a' : 'class-b'}\`
+   - **SAFE PATTERN** (ALWAYS USE THIS):
+     - Import cn utility at top of file
+     - Use \`cn()\` for all conditional classes
+     - Example: \`<div className={cn('base-class', isActive && 'active-class', isPrimary && 'primary-class')}>\`
+   - **WHY THIS HAPPENS**:
+     - Template literals with \\\${} inside JSX attributes confuse the TypeScript parser
+     - The backticks and curly braces create ambiguous syntax
+     - TypeScript expects different tokens at those positions
+   - **REMEMBER**: Never use template literals (backticks) for className - use cn() instead!
+
 # CODE STRUCTURE
 
 ## package.json
@@ -1007,6 +1035,7 @@ Before completing any app, ensure:
 - [ ] Success feedback (toast notifications)
 - [ ] Proper imports (@/ paths)
 - [ ] **NO UNUSED IMPORTS** (TS6133 - causes build failure!)
+- [ ] **USE cn() FOR ALL CONDITIONAL CLASSES** (never use template literals in className!)
 - [ ] Clean code structure
 
 ## Functionality ✅
