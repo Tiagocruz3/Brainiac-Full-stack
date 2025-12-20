@@ -659,42 +659,541 @@ Animation: Subtle hover lifts, smooth color transitions
 
 ## Modern UI Patterns (USE THESE!)
 
-### Hero Section Pattern
+### Navigation Bar Patterns
+
+**Pattern 1: Modern Sticky Nav**
 \`\`\`tsx
-<section className="min-h-screen flex items-center justify-center bg-black">
+<nav className="fixed top-0 left-0 right-0 z-50 bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800/50">
+  <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+    <div className="flex items-center gap-2">
+      <span className="text-2xl">🧠</span>
+      <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+        BrandName
+      </span>
+    </div>
+    <div className="hidden md:flex items-center gap-8">
+      <a href="#features" className="text-zinc-400 hover:text-white transition-colors">Features</a>
+      <a href="#pricing" className="text-zinc-400 hover:text-white transition-colors">Pricing</a>
+      <a href="#about" className="text-zinc-400 hover:text-white transition-colors">About</a>
+    </div>
+    <div className="flex items-center gap-3">
+      <Button variant="ghost">Sign In</Button>
+      <Button>Get Started</Button>
+    </div>
+  </div>
+</nav>
+\`\`\`
+
+**Pattern 2: Clean Minimal Nav**
+\`\`\`tsx
+<nav className="py-6 border-b border-zinc-800/50">
+  <div className="container mx-auto px-4">
+    <div className="flex items-center justify-between">
+      <h1 className="text-2xl font-bold">Logo</h1>
+      <div className="flex items-center gap-6">
+        <Button variant="ghost" size="sm">Login</Button>
+        <Button size="sm">Sign Up</Button>
+      </div>
+    </div>
+  </div>
+</nav>
+\`\`\`
+
+### Hero Section Patterns
+
+**Pattern 1: Centered Hero with Gradient (SaaS Style)**
+\`\`\`tsx
+<section className="min-h-screen flex items-center justify-center bg-gradient-to-b from-black via-zinc-950 to-black pt-20">
   <div className="container mx-auto px-4 text-center">
-    <Badge className="mb-6" variant="secondary">New Feature</Badge>
-    <h1 className="text-6xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-      Your Amazing Product
+    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/20 mb-8">
+      <span className="text-purple-400 text-sm font-medium">✨ New: AI-Powered Features</span>
+    </div>
+    <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-6 tracking-tight">
+      <span className="bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">
+        Build the Future
+      </span>
+      <br />
+      <span className="text-white">of Your Product</span>
     </h1>
-    <p className="text-xl text-zinc-400 mb-8 max-w-2xl mx-auto">
-      Build something incredible with our platform
+    <p className="text-lg md:text-xl text-zinc-400 mb-12 max-w-3xl mx-auto leading-relaxed">
+      The most powerful platform to launch, scale, and grow your SaaS business. 
+      Join thousands of teams building the future.
     </p>
-    <div className="flex gap-4 justify-center">
-      <Button size="lg">Get Started</Button>
-      <Button size="lg" variant="outline">Learn More</Button>
+    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+      <Button size="lg" className="text-base px-8 py-6 rounded-xl">
+        Start Free Trial
+      </Button>
+      <Button size="lg" variant="outline" className="text-base px-8 py-6 rounded-xl">
+        Watch Demo →
+      </Button>
+    </div>
+    <div className="flex items-center justify-center gap-6 text-sm text-zinc-500">
+      <span>✓ No credit card required</span>
+      <span>✓ 14-day free trial</span>
+      <span>✓ Cancel anytime</span>
     </div>
   </div>
 </section>
 \`\`\`
 
-### Feature Card Pattern
+**Pattern 2: Split Hero with Image/Preview (Modern)**
 \`\`\`tsx
-<Card className="bg-zinc-900/50 border-zinc-800 hover:border-purple-500/50 transition-all">
-  <CardHeader>
-    <div className="h-12 w-12 rounded-lg bg-purple-500/10 flex items-center justify-center mb-4">
-      <Sparkles className="h-6 w-6 text-purple-400" />
+<section className="min-h-screen flex items-center bg-black pt-20">
+  <div className="container mx-auto px-4">
+    <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <div>
+        <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
+          <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+            Transform Your Workflow
+          </span>{' '}
+          <span className="text-white">in Minutes</span>
+        </h1>
+        <p className="text-xl text-zinc-400 mb-8 leading-relaxed">
+          The all-in-one platform that helps teams collaborate, automate, 
+          and ship faster than ever before.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 mb-8">
+          <Button size="lg" className="px-8">Get Started Free</Button>
+          <Button size="lg" variant="outline">View Pricing</Button>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex -space-x-2">
+            {[1,2,3,4].map(i => (
+              <div key={i} className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 border-2 border-black" />
+            ))}
+          </div>
+          <p className="text-sm text-zinc-500">
+            <span className="text-white font-semibold">10,000+</span> teams already shipping faster
+          </p>
+        </div>
+      </div>
+      <div className="relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 blur-3xl opacity-20 rounded-3xl" />
+        <Card className="relative bg-zinc-900/50 border-zinc-800 p-8">
+          <div className="aspect-video bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-xl flex items-center justify-center">
+            <span className="text-6xl">🚀</span>
+          </div>
+        </Card>
+      </div>
     </div>
-    <CardTitle>Feature Title</CardTitle>
-    <CardDescription>Brief description of the feature</CardDescription>
-  </CardHeader>
-  <CardContent>
-    Detailed content about this amazing feature
-  </CardContent>
-</Card>
+  </div>
+</section>
 \`\`\`
 
-### User Menu Pattern
+**Pattern 3: Minimal Centered Hero (Apple Style)**
+\`\`\`tsx
+<section className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-black px-4 pt-20">
+  <div className="max-w-4xl mx-auto text-center">
+    <h1 className="text-6xl md:text-8xl font-bold mb-6 tracking-tight text-black dark:text-white">
+      Simply Powerful
+    </h1>
+    <p className="text-2xl md:text-3xl text-zinc-600 dark:text-zinc-400 mb-12">
+      Everything you need. Nothing you don't.
+    </p>
+    <Button size="lg" className="text-base px-10 py-6 rounded-full">
+      Try it now →
+    </Button>
+  </div>
+</section>
+\`\`\`
+
+**Pattern 4: Hero with Stats (Credibility Focused)**
+\`\`\`tsx
+<section className="min-h-screen flex items-center bg-gradient-to-b from-zinc-950 to-black pt-20">
+  <div className="container mx-auto px-4">
+    <div className="max-w-4xl mx-auto text-center mb-16">
+      <h1 className="text-5xl md:text-7xl font-bold mb-6">
+        <span className="text-white">The Platform That</span>{' '}
+        <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+          Powers Growth
+        </span>
+      </h1>
+      <p className="text-xl text-zinc-400 mb-8 max-w-2xl mx-auto">
+        Join the companies using our platform to scale their operations 
+        and accelerate growth.
+      </p>
+      <Button size="lg" className="px-8 py-6">Start Building Today</Button>
+    </div>
+    
+    <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+      {[
+        { label: 'Active Users', value: '2M+' },
+        { label: 'Projects Created', value: '500K+' },
+        { label: 'Countries', value: '150+' }
+      ].map((stat, i) => (
+        <Card key={i} className="bg-zinc-900/50 border-zinc-800 p-8 text-center">
+          <div className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
+            {stat.value}
+          </div>
+          <div className="text-zinc-400">{stat.label}</div>
+        </Card>
+      ))}
+    </div>
+  </div>
+</section>
+\`\`\`
+
+### Features Section Patterns
+
+**Pattern 1: Feature Grid (3-Column)**
+\`\`\`tsx
+<section className="py-24 bg-black">
+  <div className="container mx-auto px-4">
+    <div className="text-center mb-16">
+      <h2 className="text-4xl md:text-5xl font-bold mb-4">
+        <span className="text-white">Powerful </span>
+        <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+          Features
+        </span>
+      </h2>
+      <p className="text-xl text-zinc-400 max-w-2xl mx-auto">
+        Everything you need to build, launch, and scale your product
+      </p>
+    </div>
+    
+    <div className="grid md:grid-cols-3 gap-8">
+      {[
+        { icon: '🚀', title: 'Lightning Fast', desc: 'Optimized for speed and performance' },
+        { icon: '🔒', title: 'Secure by Default', desc: 'Enterprise-grade security built in' },
+        { icon: '📊', title: 'Advanced Analytics', desc: 'Track everything that matters' },
+        { icon: '🎨', title: 'Beautiful UI', desc: 'Stunning design out of the box' },
+        { icon: '🔧', title: 'Easy Integration', desc: 'Connect with your favorite tools' },
+        { icon: '💪', title: 'Powerful API', desc: 'RESTful API for everything' }
+      ].map((feature, i) => (
+        <Card key={i} className="bg-zinc-900/50 border-zinc-800 hover:border-purple-500/50 transition-all hover:scale-105 duration-300">
+          <CardHeader>
+            <div className="text-4xl mb-4">{feature.icon}</div>
+            <CardTitle>{feature.title}</CardTitle>
+            <CardDescription>{feature.desc}</CardDescription>
+          </CardHeader>
+        </Card>
+      ))}
+    </div>
+  </div>
+</section>
+\`\`\`
+
+**Pattern 2: Features with Icons (Detailed)**
+\`\`\`tsx
+<section className="py-24 bg-zinc-950">
+  <div className="container mx-auto px-4">
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-12">
+      {[
+        { icon: Zap, title: 'Instant Deployment', desc: 'Deploy your apps in seconds with our global CDN' },
+        { icon: Shield, title: 'Enterprise Security', desc: 'Bank-level encryption and compliance' },
+        { icon: BarChart, title: 'Real-time Analytics', desc: 'Monitor performance with live dashboards' }
+      ].map((feature, i) => {
+        const Icon = feature.icon;
+        return (
+          <div key={i} className="group">
+            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 p-0.5 mb-6">
+              <div className="h-full w-full rounded-2xl bg-zinc-900 flex items-center justify-center group-hover:bg-zinc-800 transition-colors">
+                <Icon className="h-7 w-7 text-purple-400" />
+              </div>
+            </div>
+            <h3 className="text-xl font-bold text-white mb-3">{feature.title}</h3>
+            <p className="text-zinc-400 leading-relaxed">{feature.desc}</p>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+</section>
+\`\`\`
+
+### Pricing Section Pattern
+\`\`\`tsx
+<section id="pricing" className="py-24 bg-black">
+  <div className="container mx-auto px-4">
+    <div className="text-center mb-16">
+      <h2 className="text-4xl md:text-5xl font-bold mb-4 text-white">
+        Simple, Transparent Pricing
+      </h2>
+      <p className="text-xl text-zinc-400">Choose the perfect plan for your needs</p>
+    </div>
+    
+    <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+      {[
+        { 
+          name: 'Starter', 
+          price: '$29', 
+          features: ['10 Projects', '5GB Storage', 'Basic Support', 'API Access'] 
+        },
+        { 
+          name: 'Pro', 
+          price: '$99', 
+          popular: true,
+          features: ['Unlimited Projects', '100GB Storage', 'Priority Support', 'Advanced API', 'Custom Domain'] 
+        },
+        { 
+          name: 'Enterprise', 
+          price: '$299', 
+          features: ['Everything in Pro', 'Unlimited Storage', '24/7 Support', 'Custom Solutions', 'SLA'] 
+        }
+      ].map((plan, i) => (
+        <Card 
+          key={i} 
+          className={\`relative \${
+            plan.popular 
+              ? 'bg-gradient-to-b from-purple-500/20 to-pink-500/20 border-purple-500/50 scale-105' 
+              : 'bg-zinc-900/50 border-zinc-800'
+          }\`}
+        >
+          {plan.popular && (
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-sm font-medium">
+              Most Popular
+            </div>
+          )}
+          <CardHeader>
+            <CardTitle className="text-2xl">{plan.name}</CardTitle>
+            <div className="flex items-baseline gap-2 mt-4">
+              <span className="text-5xl font-bold text-white">{plan.price}</span>
+              <span className="text-zinc-400">/month</span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-3 mb-6">
+              {plan.features.map((feature, j) => (
+                <li key={j} className="flex items-center gap-2 text-zinc-300">
+                  <span className="text-green-400">✓</span> {feature}
+                </li>
+              ))}
+            </ul>
+            <Button className="w-full" variant={plan.popular ? 'default' : 'outline'}>
+              Get Started
+            </Button>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  </div>
+</section>
+\`\`\`
+
+### Testimonials Section Pattern
+\`\`\`tsx
+<section className="py-24 bg-zinc-950">
+  <div className="container mx-auto px-4">
+    <div className="text-center mb-16">
+      <h2 className="text-4xl md:text-5xl font-bold mb-4 text-white">
+        Loved by Thousands
+      </h2>
+      <p className="text-xl text-zinc-400">See what our customers are saying</p>
+    </div>
+    
+    <div className="grid md:grid-cols-3 gap-8">
+      {[
+        { name: 'Sarah Chen', role: 'CEO at TechCorp', quote: 'This platform transformed how we work. Absolutely incredible!' },
+        { name: 'Mike Johnson', role: 'Product Manager', quote: 'Best decision we made this year. Highly recommended!' },
+        { name: 'Emily Davis', role: 'Designer', quote: 'Beautiful, fast, and so easy to use. Love it!' }
+      ].map((testimonial, i) => (
+        <Card key={i} className="bg-zinc-900/50 border-zinc-800">
+          <CardHeader>
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-pink-400" />
+              <div>
+                <div className="font-semibold text-white">{testimonial.name}</div>
+                <div className="text-sm text-zinc-500">{testimonial.role}</div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-zinc-300 italic">"{testimonial.quote}"</p>
+            <div className="flex gap-1 mt-4 text-yellow-400">
+              {'★'.repeat(5)}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  </div>
+</section>
+\`\`\`
+
+### CTA (Call-to-Action) Section Pattern
+\`\`\`tsx
+<section className="py-24 bg-gradient-to-r from-purple-900/50 to-pink-900/50">
+  <div className="container mx-auto px-4 text-center">
+    <h2 className="text-4xl md:text-6xl font-bold mb-6 text-white">
+      Ready to Get Started?
+    </h2>
+    <p className="text-xl text-zinc-300 mb-10 max-w-2xl mx-auto">
+      Join thousands of teams already building amazing products with our platform
+    </p>
+    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+      <Button size="lg" className="px-10 py-6 text-lg">
+        Start Free Trial
+      </Button>
+      <Button size="lg" variant="outline" className="px-10 py-6 text-lg">
+        Schedule Demo
+      </Button>
+    </div>
+    <p className="text-sm text-zinc-400 mt-6">
+      No credit card required • 14-day free trial • Cancel anytime
+    </p>
+  </div>
+</section>
+\`\`\`
+
+### Footer Pattern
+\`\`\`tsx
+<footer className="bg-black border-t border-zinc-800">
+  <div className="container mx-auto px-4 py-12">
+    <div className="grid md:grid-cols-4 gap-8 mb-8">
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-2xl">🧠</span>
+          <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+            BrandName
+          </span>
+        </div>
+        <p className="text-zinc-500 text-sm">
+          Building the future, one product at a time.
+        </p>
+      </div>
+      
+      <div>
+        <h3 className="font-semibold text-white mb-4">Product</h3>
+        <ul className="space-y-2 text-sm text-zinc-400">
+          <li><a href="#" className="hover:text-white transition-colors">Features</a></li>
+          <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
+          <li><a href="#" className="hover:text-white transition-colors">Security</a></li>
+        </ul>
+      </div>
+      
+      <div>
+        <h3 className="font-semibold text-white mb-4">Company</h3>
+        <ul className="space-y-2 text-sm text-zinc-400">
+          <li><a href="#" className="hover:text-white transition-colors">About</a></li>
+          <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
+          <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
+        </ul>
+      </div>
+      
+      <div>
+        <h3 className="font-semibold text-white mb-4">Legal</h3>
+        <ul className="space-y-2 text-sm text-zinc-400">
+          <li><a href="#" className="hover:text-white transition-colors">Privacy</a></li>
+          <li><a href="#" className="hover:text-white transition-colors">Terms</a></li>
+          <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+    
+    <div className="border-t border-zinc-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+      <p className="text-sm text-zinc-500">
+        © 2024 BrandName. All rights reserved.
+      </p>
+      <p className="text-sm text-zinc-500">
+        Built with <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">Brainiac</span> ✨
+      </p>
+    </div>
+  </div>
+</footer>
+\`\`\`
+
+### Logo Cloud / Social Proof Pattern
+\`\`\`tsx
+<section className="py-16 bg-zinc-950">
+  <div className="container mx-auto px-4">
+    <p className="text-center text-zinc-500 mb-8 text-sm uppercase tracking-wider">
+      Trusted by Leading Companies
+    </p>
+    <div className="flex flex-wrap justify-center items-center gap-12 opacity-50">
+      {['Google', 'Microsoft', 'Amazon', 'Tesla', 'Apple', 'Meta'].map((company, i) => (
+        <div key={i} className="text-2xl font-bold text-zinc-600">{company}</div>
+      ))}
+    </div>
+  </div>
+</section>
+\`\`\`
+
+### "How It Works" Section Pattern
+\`\`\`tsx
+<section className="py-24 bg-black">
+  <div className="container mx-auto px-4">
+    <div className="text-center mb-16">
+      <h2 className="text-4xl md:text-5xl font-bold mb-4 text-white">
+        How It Works
+      </h2>
+      <p className="text-xl text-zinc-400">Get started in three simple steps</p>
+    </div>
+    
+    <div className="grid md:grid-cols-3 gap-12 max-w-5xl mx-auto">
+      {[
+        { step: '01', title: 'Sign Up', desc: 'Create your account in seconds. No credit card required.' },
+        { step: '02', title: 'Configure', desc: 'Set up your workspace and invite your team members.' },
+        { step: '03', title: 'Launch', desc: 'Start building and deploy your first project instantly.' }
+      ].map((item, i) => (
+        <div key={i} className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-2xl font-bold text-white mb-6">
+            {item.step}
+          </div>
+          <h3 className="text-2xl font-bold text-white mb-4">{item.title}</h3>
+          <p className="text-zinc-400">{item.desc}</p>
+          {i < 2 && (
+            <div className="hidden md:block absolute top-8 left-full w-full h-0.5 bg-gradient-to-r from-purple-500 to-transparent -translate-x-1/2" />
+          )}
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+\`\`\`
+
+### Stats/Metrics Section Pattern
+\`\`\`tsx
+<section className="py-20 bg-zinc-950">
+  <div className="container mx-auto px-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+      {[
+        { value: '99.9%', label: 'Uptime' },
+        { value: '<100ms', label: 'Response Time' },
+        { value: '150+', label: 'Countries' },
+        { value: '24/7', label: 'Support' }
+      ].map((stat, i) => (
+        <div key={i}>
+          <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
+            {stat.value}
+          </div>
+          <div className="text-zinc-500">{stat.label}</div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+\`\`\`
+
+### FAQ Section Pattern
+\`\`\`tsx
+<section className="py-24 bg-black">
+  <div className="container mx-auto px-4 max-w-3xl">
+    <div className="text-center mb-16">
+      <h2 className="text-4xl md:text-5xl font-bold mb-4 text-white">
+        Frequently Asked Questions
+      </h2>
+      <p className="text-xl text-zinc-400">Everything you need to know</p>
+    </div>
+    
+    <div className="space-y-4">
+      {[
+        { q: 'How do I get started?', a: 'Simply sign up for a free account and follow our quick start guide.' },
+        { q: 'What payment methods do you accept?', a: 'We accept all major credit cards, PayPal, and bank transfers.' },
+        { q: 'Can I cancel my subscription?', a: 'Yes, you can cancel anytime from your account settings.' }
+      ].map((faq, i) => (
+        <Card key={i} className="bg-zinc-900/50 border-zinc-800">
+          <CardHeader>
+            <CardTitle className="text-lg text-white">{faq.q}</CardTitle>
+            <CardDescription className="text-base text-zinc-400 mt-2">{faq.a}</CardDescription>
+          </CardHeader>
+        </Card>
+      ))}
+    </div>
+  </div>
+</section>
+\`\`\`
+
+### User Menu Pattern (App Navigation)
 \`\`\`tsx
 <DropdownMenu>
   <DropdownMenuTrigger>
@@ -736,6 +1235,88 @@ Animation: Subtle hover lifts, smooth color transitions
   </DialogContent>
 </Dialog>
 \`\`\`
+
+## Complete Landing Page Template
+
+**Typical Structure for SaaS/Product Landing Pages:**
+\`\`\`tsx
+function App() {
+  return (
+    <div className="min-h-screen bg-black text-white">
+      {/* Navigation Bar (Sticky) */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800/50">
+        {/* Use Pattern 1 from Navigation Bar Patterns */}
+      </nav>
+
+      {/* Hero Section - Full screen, attention-grabbing */}
+      <section className="min-h-screen flex items-center">
+        {/* Use any Hero Pattern - Pick based on content type */}
+        {/* Pattern 1: Centered (SaaS) */}
+        {/* Pattern 2: Split (Product showcase) */}
+        {/* Pattern 3: Minimal (Simple message) */}
+        {/* Pattern 4: With Stats (Credibility) */}
+      </section>
+
+      {/* Logo Cloud - Social Proof */}
+      <section className="py-16 bg-zinc-950">
+        {/* Use Logo Cloud Pattern */}
+      </section>
+
+      {/* Features Section - 3 columns */}
+      <section id="features" className="py-24 bg-black">
+        {/* Use Features Grid Pattern */}
+      </section>
+
+      {/* How It Works - 3 steps */}
+      <section className="py-24 bg-zinc-950">
+        {/* Use How It Works Pattern */}
+      </section>
+
+      {/* Stats/Metrics - Build credibility */}
+      <section className="py-20 bg-black">
+        {/* Use Stats Pattern */}
+      </section>
+
+      {/* Pricing - 3 tiers */}
+      <section id="pricing" className="py-24 bg-zinc-950">
+        {/* Use Pricing Pattern */}
+      </section>
+
+      {/* Testimonials - Social proof */}
+      <section className="py-24 bg-black">
+        {/* Use Testimonials Pattern */}
+      </section>
+
+      {/* FAQ - Address concerns */}
+      <section className="py-24 bg-zinc-950">
+        {/* Use FAQ Pattern */}
+      </section>
+
+      {/* CTA - Final conversion push */}
+      <section className="py-24 bg-gradient-to-r from-purple-900/50 to-pink-900/50">
+        {/* Use CTA Pattern */}
+      </section>
+
+      {/* Footer - Links and branding */}
+      <footer className="bg-black border-t border-zinc-800">
+        {/* Use Footer Pattern (with Brainiac credit!) */}
+      </footer>
+    </div>
+  );
+}
+\`\`\`
+
+**KEY PRINCIPLES:**
+1. **Visual Hierarchy**: Hero → Features → Social Proof → Pricing → CTA
+2. **Contrast**: Alternate between black and zinc-950 backgrounds
+3. **Spacing**: Use py-24 for major sections, py-16 for minor ones
+4. **Gradients**: Purple-to-pink for CTAs and accents
+5. **Mobile First**: Always test on small screens (grid → flex)
+6. **Smooth Scroll**: Add smooth scroll behavior for anchor links
+7. **Loading States**: Add skeleton loaders for dynamic content
+8. **Animations**: Use transition-all and hover effects liberally
+
+**REMEMBER**: Mix and match patterns based on the user's request. Not every landing page needs all sections!
 
 ### Toast Notification Pattern
 \`\`\`tsx
