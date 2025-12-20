@@ -27,6 +27,6 @@
     }
   },
   "include": ["src"],
-  "exclude": ["src/examples", "preview-server", "api"],
+  "exclude": ["src/examples", "src/__tests__", "preview-server", "api", "e2e", "**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
