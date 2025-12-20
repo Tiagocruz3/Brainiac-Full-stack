@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 import { File, Folder, FolderOpen, Copy, Check, ExternalLink } from 'lucide-react';
 import { Button } from './ui/Button';
 import { cn } from '@/lib/utils';
+import Editor from '@monaco-editor/react';
 
 export interface CodeViewerProps {
   files: Record<string, string>;
@@ -34,9 +35,6 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [copiedFile, setCopiedFile] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['root']));
-  const [visibleLines, setVisibleLines] = useState<number>(0);
-  const [isTyping, setIsTyping] = useState<boolean>(false);
-  const [lastFileContent, setLastFileContent] = useState<string>('');
 
   // Build file tree from flat file list
   const buildFileTree = (files: Record<string, string>): FileNode => {
@@ -92,21 +90,6 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
     setTimeout(() => setCopiedFile(null), 2000);
   };
 
-  const getLanguageFromFileName = (fileName: string): string => {
-    const ext = fileName.split('.').pop()?.toLowerCase();
-    const langMap: Record<string, string> = {
-      'ts': 'typescript',
-      'tsx': 'typescript',
-      'js': 'javascript',
-      'jsx': 'javascript',
-      'json': 'json',
-      'css': 'css',
-      'html': 'html',
-      'md': 'markdown',
-    };
-    return langMap[ext || ''] || 'text';
-  };
-
   const getFileIcon = (fileName: string): string => {
     const ext = fileName.split('.').pop()?.toLowerCase();
     const iconMap: Record<string, string> = {
@@ -123,53 +106,24 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
     return iconMap[ext || ''] || '📄';
   };
 
-  const highlightSyntax = (code: string, _language: string, maxLines?: number): JSX.Element => {
-    // Claude-style syntax highlighting with subtle colors
-    const allLines = code.split('\n');
-    const lines = maxLines ? allLines.slice(0, maxLines) : allLines;
-    
-    return (
-      <>
-        {lines.map((line, idx) => {
-          let highlightedLine = line
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-          
-          // Keywords (purple/violet)
-          const keywords = ['import', 'export', 'const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'class', 'interface', 'type', 'enum', 'async', 'await', 'from', 'default', 'extends', 'implements'];
-          keywords.forEach(keyword => {
-            const regex = new RegExp(`\\b(${keyword})\\b`, 'g');
-            highlightedLine = highlightedLine.replace(regex, '<span class="text-violet-400">$1</span>');
-          });
-          
-          // Strings (emerald/green)
-          highlightedLine = highlightedLine.replace(/(["'`])((?:\\.|(?!\1).)*?)\1/g, '<span class="text-emerald-400">$1$2$1</span>');
-          
-          // Comments (muted gray)
-          highlightedLine = highlightedLine.replace(/(\/\/.*$)/g, '<span class="text-zinc-600 italic">$1</span>');
-          highlightedLine = highlightedLine.replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="text-zinc-600 italic">$1</span>');
-          
-          // Numbers (amber)
-          highlightedLine = highlightedLine.replace(/\b(\d+\.?\d*)\b/g, '<span class="text-amber-400">$1</span>');
-          
-          // JSX/TSX components (cyan)
-          highlightedLine = highlightedLine.replace(/&lt;(\/?[A-Z]\w*)/g, '<span class="text-cyan-400">&lt;$1</span>');
-          highlightedLine = highlightedLine.replace(/&lt;(\/?[a-z]\w*)/g, '<span class="text-sky-400">&lt;$1</span>');
-          
-          // Function calls (blue)
-          highlightedLine = highlightedLine.replace(/\b([a-zA-Z_]\w*)\s*(?=\()/g, '<span class="text-blue-400">$1</span>');
-          
-          return (
-            <div key={idx} className="flex hover:bg-zinc-900/20 transition-colors">
-              <span className="text-zinc-700 select-none w-8 text-right pr-2 flex-shrink-0 text-[10px] leading-[1.6]">
-                {idx + 1}
-              </span>
-              <span className="flex-1 text-zinc-300" dangerouslySetInnerHTML={{ __html: highlightedLine || '&nbsp;' }} />
-            </div>
-          );
-        })}
-      </>
-    );
+  // Get Monaco language from file name
+  const getMonacoLanguage = (fileName: string): string => {
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    const langMap: Record<string, string> = {
+      'ts': 'typescript',
+      'tsx': 'typescript',
+      'js': 'javascript',
+      'jsx': 'javascript',
+      'json': 'json',
+      'css': 'css',
+      'scss': 'scss',
+      'html': 'html',
+      'md': 'markdown',
+      'py': 'python',
+      'yml': 'yaml',
+      'yaml': 'yaml',
+    };
+    return langMap[ext || ''] || 'plaintext';
   };
 
   const renderFileTree = (node: FileNode, depth = 0): React.ReactNode => {
@@ -226,50 +180,6 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
     }
   }, [defaultFile, selectedFile]);
 
-  // Typing animation effect
-  React.useEffect(() => {
-    if (!selectedFileContent) return;
-
-    // Check if content changed (new file selected or content updated)
-    if (selectedFileContent !== lastFileContent) {
-      setLastFileContent(selectedFileContent);
-      setVisibleLines(0);
-      setIsTyping(true);
-
-      const totalLines = selectedFileContent.split('\n').length;
-      
-      // Slower, very visible animation - like watching someone type
-      const totalDuration = 1200; // 1.2 seconds total
-      const framesPerSecond = 60;
-      const totalFrames = Math.floor((totalDuration / 1000) * framesPerSecond);
-      const linesPerFrame = Math.max(1, Math.ceil(totalLines / totalFrames));
-      const delay = Math.floor(1000 / framesPerSecond); // ~16.7ms for 60fps
-
-      let animationTimer: NodeJS.Timeout;
-
-      // Small initial delay so user sees the animation start
-      const startDelay = setTimeout(() => {
-        let currentLine = 0;
-        animationTimer = setInterval(() => {
-          currentLine += linesPerFrame;
-          if (currentLine >= totalLines) {
-            setVisibleLines(totalLines);
-            setIsTyping(false);
-            clearInterval(animationTimer);
-          } else {
-            setVisibleLines(currentLine);
-          }
-        }, delay);
-      }, 150); // 150ms delay before starting so user definitely sees it
-
-      // Cleanup both timers
-      return () => {
-        clearTimeout(startDelay);
-        if (animationTimer) clearInterval(animationTimer);
-      };
-    }
-  }, [selectedFileContent, lastFileContent]);
-
   return (
     <div className={cn('h-full flex flex-col border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950', className)}>
       {/* Compact Header */}
@@ -313,19 +223,10 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
         {/* Compact Code Display */}
         <div className="col-span-4 flex flex-col overflow-hidden">
           <div className="flex items-center justify-between px-3 py-1 bg-zinc-900/30 border-b border-zinc-800">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-mono text-purple-400 truncate">
-                {selectedFile || 'No file selected'}
-              </span>
-              {isTyping && (
-                <div className="flex items-center gap-1 text-[10px] text-zinc-500">
-                  <span className="inline-block w-1 h-1 bg-purple-500 rounded-full animate-pulse" />
-                  <span className="inline-block w-1 h-1 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '200ms' }} />
-                  <span className="inline-block w-1 h-1 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '400ms' }} />
-                </div>
-              )}
-            </div>
-            {selectedFileContent && !isTyping && (
+            <span className="text-[11px] font-mono text-purple-400 truncate">
+              {selectedFile || 'No file selected'}
+            </span>
+            {selectedFileContent && (
               <button
                 onClick={() => copyToClipboard(selectedFileContent, selectedFile!)}
                 className="flex items-center gap-1 px-2 py-0.5 hover:bg-zinc-800 rounded text-[10px] text-zinc-400 hover:text-zinc-200 transition-colors"
@@ -344,28 +245,39 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
               </button>
             )}
           </div>
-          <div className="flex-1 overflow-auto bg-[#0a0a0a]">
+          <div className="flex-1 overflow-hidden bg-[#1e1e1e]">
             {selectedFileContent ? (
-              <div className={cn(
-                "transition-opacity duration-200",
-                isTyping ? "opacity-100" : "opacity-100"
-              )}>
-                <pre className="p-3 text-[11px] font-mono leading-[1.6]">
-                  {highlightSyntax(
-                    selectedFileContent, 
-                    getLanguageFromFileName(selectedFile!),
-                    isTyping ? visibleLines : undefined
-                  )}
-                  {isTyping && visibleLines > 0 && (
-                    <div className="flex mt-0.5">
-                      <span className="text-zinc-700 select-none w-8 text-right pr-2 flex-shrink-0 text-[10px] leading-[1.6]">
-                        {visibleLines + 1}
-                      </span>
-                      <span className="inline-block w-1.5 h-3.5 bg-purple-500 animate-pulse shadow-lg shadow-purple-500/50" />
-                    </div>
-                  )}
-                </pre>
-              </div>
+              <Editor
+                height="100%"
+                language={getMonacoLanguage(selectedFile!)}
+                value={selectedFileContent}
+                theme="vs-dark"
+                options={{
+                  readOnly: true,
+                  minimap: { enabled: false },
+                  fontSize: 12,
+                  lineNumbers: 'on',
+                  scrollBeyondLastLine: false,
+                  wordWrap: 'on',
+                  automaticLayout: true,
+                  padding: { top: 12, bottom: 12 },
+                  scrollbar: {
+                    vertical: 'auto',
+                    horizontal: 'auto',
+                    verticalScrollbarSize: 10,
+                    horizontalScrollbarSize: 10,
+                  },
+                  renderLineHighlight: 'none',
+                  overviewRulerBorder: false,
+                  hideCursorInOverviewRuler: true,
+                  overviewRulerLanes: 0,
+                }}
+                loading={
+                  <div className="h-full flex items-center justify-center text-zinc-500">
+                    <div className="animate-spin h-8 w-8 border-2 border-purple-500 border-t-transparent rounded-full" />
+                  </div>
+                }
+              />
             ) : (
               <div className="h-full flex items-center justify-center text-zinc-600">
                 <div className="text-center">
