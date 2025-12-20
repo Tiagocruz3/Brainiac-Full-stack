@@ -35,6 +35,8 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [copiedFile, setCopiedFile] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['root']));
+  const [displayedContent, setDisplayedContent] = useState<string>('');
+  const [isTyping, setIsTyping] = useState(false);
 
   // Build file tree from flat file list
   const buildFileTree = (files: Record<string, string>): FileNode => {
@@ -180,6 +182,39 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
     }
   }, [defaultFile, selectedFile]);
 
+  // Typing animation effect
+  React.useEffect(() => {
+    if (!selectedFileContent) {
+      setDisplayedContent('');
+      setIsTyping(false);
+      return;
+    }
+
+    // Reset and start typing animation
+    setDisplayedContent('');
+    setIsTyping(true);
+    let currentIndex = 0;
+    const typingSpeed = 3; // Characters per frame (faster = higher number)
+    
+    const typeInterval = setInterval(() => {
+      if (currentIndex >= selectedFileContent.length) {
+        setIsTyping(false);
+        clearInterval(typeInterval);
+        return;
+      }
+
+      // Type multiple characters at once for smoother animation
+      const nextIndex = Math.min(currentIndex + typingSpeed, selectedFileContent.length);
+      setDisplayedContent(selectedFileContent.substring(0, nextIndex));
+      currentIndex = nextIndex;
+    }, 16); // ~60fps
+
+    return () => {
+      clearInterval(typeInterval);
+      setIsTyping(false);
+    };
+  }, [selectedFileContent]);
+
   return (
     <div className={cn('h-full flex flex-col border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950', className)}>
       {/* Compact Header */}
@@ -245,39 +280,49 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
               </button>
             )}
           </div>
-          <div className="flex-1 overflow-hidden bg-[#1e1e1e]">
+          <div className="flex-1 overflow-hidden bg-[#1e1e1e] relative">
             {selectedFileContent ? (
-              <Editor
-                height="100%"
-                language={getMonacoLanguage(selectedFile!)}
-                value={selectedFileContent}
-                theme="vs-dark"
-                options={{
-                  readOnly: true,
-                  minimap: { enabled: false },
-                  fontSize: 12,
-                  lineNumbers: 'on',
-                  scrollBeyondLastLine: false,
-                  wordWrap: 'on',
-                  automaticLayout: true,
-                  padding: { top: 12, bottom: 12 },
-                  scrollbar: {
-                    vertical: 'auto',
-                    horizontal: 'auto',
-                    verticalScrollbarSize: 10,
-                    horizontalScrollbarSize: 10,
-                  },
-                  renderLineHighlight: 'none',
-                  overviewRulerBorder: false,
-                  hideCursorInOverviewRuler: true,
-                  overviewRulerLanes: 0,
-                }}
-                loading={
-                  <div className="h-full flex items-center justify-center text-zinc-500">
-                    <div className="animate-spin h-8 w-8 border-2 border-purple-500 border-t-transparent rounded-full" />
+              <>
+                <Editor
+                  height="100%"
+                  language={getMonacoLanguage(selectedFile!)}
+                  value={displayedContent}
+                  theme="vs-dark"
+                  options={{
+                    readOnly: true,
+                    minimap: { enabled: false },
+                    fontSize: 12,
+                    lineNumbers: 'on',
+                    scrollBeyondLastLine: false,
+                    wordWrap: 'on',
+                    automaticLayout: true,
+                    padding: { top: 12, bottom: 12 },
+                    scrollbar: {
+                      vertical: 'auto',
+                      horizontal: 'auto',
+                      verticalScrollbarSize: 10,
+                      horizontalScrollbarSize: 10,
+                    },
+                    renderLineHighlight: 'none',
+                    overviewRulerBorder: false,
+                    hideCursorInOverviewRuler: true,
+                    overviewRulerLanes: 0,
+                    cursorStyle: isTyping ? 'line' : 'line-thin',
+                    cursorBlinking: isTyping ? 'blink' : 'solid',
+                  }}
+                  loading={
+                    <div className="h-full flex items-center justify-center text-zinc-500">
+                      <div className="animate-spin h-8 w-8 border-2 border-purple-500 border-t-transparent rounded-full" />
+                    </div>
+                  }
+                />
+                {isTyping && (
+                  <div className="absolute top-2 right-2 flex items-center gap-2 px-2 py-1 bg-purple-500/10 border border-purple-500/20 rounded text-xs text-purple-400">
+                    <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" />
+                    <span>Writing code...</span>
                   </div>
-                }
-              />
+                )}
+              </>
             ) : (
               <div className="h-full flex items-center justify-center text-zinc-600">
                 <div className="text-center">
