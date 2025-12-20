@@ -7,6 +7,8 @@ import { StatusBar } from './components/StatusBar';
 import { ProjectHistory } from './components/ProjectHistory';
 import { RepoManager } from './components/RepoManager';
 import { CodeViewer } from './components/CodeViewer';
+import { PreviewLoading } from './components/PreviewLoading';
+import { PreviewIframe } from './components/PreviewIframe';
 import { Settings as SettingsType, AgentMessage, BuildStatus, ProjectHistory as ProjectHistoryType } from './types';
 import { hasValidSettings, loadHistory, loadSettings, saveProject } from './lib/storage';
 import { generateId } from './lib/utils';
@@ -33,6 +35,8 @@ function App() {
   const [currentProjectId, setCurrentProjectId] = useState<string>('');
   const [currentProjectName, setCurrentProjectName] = useState<string>('');
   const [currentDeploymentUrl, setCurrentDeploymentUrl] = useState<string>('');
+  const [filesGenerated, setFilesGenerated] = useState<number>(0);
+  const [totalFiles, setTotalFiles] = useState<number>(0);
 
   useEffect(() => {
     // Check if settings exist on mount
@@ -97,6 +101,8 @@ function App() {
       setPreviewFiles(null); // Clear previous preview
       setCurrentProjectName(message.slice(0, 50));
       setCurrentDeploymentUrl('');
+      setFilesGenerated(0);
+      setTotalFiles(17); // Standard template has ~17 files
 
       // Run the agent with conversation history for context!
       const result = await runAgent(
@@ -132,8 +138,12 @@ function App() {
         // 🎬 File update callback for live preview!
         (files) => {
           console.log('🎬 Received files for preview:', Object.keys(files));
-          addStepMessage('🎬 Live preview ready!');
+          const fileCount = Object.keys(files).length;
+          setFilesGenerated(fileCount);
           setPreviewFiles(files);
+          if (fileCount >= totalFiles) {
+            addStepMessage('🎬 All files generated!');
+          }
         }
       );
 
@@ -313,9 +323,21 @@ function App() {
         </div>
 
         {/* Code Viewer + Live Preview Column */}
-        {(previewFiles || currentDeploymentUrl) && (
+        {(isGenerating || previewFiles || currentDeploymentUrl) && (
           <div className="flex flex-col md:w-1/2 gap-4 animate-in slide-in-from-right overflow-hidden">
-            {/* Code Viewer */}
+            {/* Loading State - Show while building and before files are generated */}
+            {isGenerating && !previewFiles && (
+              <div className="flex-1 min-h-0">
+                <PreviewLoading
+                  stage={buildStatus.stage}
+                  filesGenerated={filesGenerated}
+                  totalFiles={totalFiles}
+                  message={buildStatus.message || 'Preparing preview...'}
+                />
+              </div>
+            )}
+
+            {/* Code Viewer - Show when files are generated */}
             {previewFiles && currentProjectId && (
               <div className="flex-1 min-h-0">
                 <CodeViewer
@@ -327,37 +349,12 @@ function App() {
               </div>
             )}
             
-            {/* Live Preview Iframe */}
+            {/* Live Preview Iframe - Show when deployment URL is available */}
             {currentDeploymentUrl && (
-              <div className="flex-1 min-h-0 flex flex-col border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950">
-                <div className="flex items-center justify-between px-3 py-2 bg-zinc-900/50 border-b border-zinc-800">
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-green-500/80 animate-pulse" />
-                    </div>
-                    <span className="text-xs font-medium text-zinc-400">Live Preview</span>
-                    <span className="text-xs text-zinc-600">·</span>
-                    <a 
-                      href={currentDeploymentUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-xs text-purple-400 hover:text-purple-300 hover:underline"
-                    >
-                      {currentDeploymentUrl.replace('https://', '')}
-                    </a>
-                  </div>
-                  <button
-                    onClick={() => window.open(currentDeploymentUrl, '_blank')}
-                    className="text-xs px-2 py-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-zinc-200 transition-colors"
-                  >
-                    Open in new tab →
-                  </button>
-                </div>
-                <iframe
-                  src={currentDeploymentUrl}
-                  className="w-full h-full bg-white"
-                  title="Live Preview"
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+              <div className="flex-1 min-h-0">
+                <PreviewIframe
+                  url={currentDeploymentUrl}
+                  projectName={currentProjectName || 'Generated App'}
                 />
               </div>
             )}
