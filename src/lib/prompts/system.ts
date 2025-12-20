@@ -1438,7 +1438,29 @@ These issues have caused failed deployments before. Always avoid them:
          - \`"esModuleInterop": true\`
          - \`"types": ["node"]\`
          - \`"include": ["vite.config.ts"]\`
-   - Alternatively, if you choose **not** to create \`tsconfig.node.json\`, then **omit** the \`references\` entry from \`tsconfig.json\` so TypeScript doesn’t look for a non-existent file.
+   - Alternatively, if you choose **not** to create \`tsconfig.node.json\`, then **omit** the \`references\` entry from \`tsconfig.json\` so TypeScript doesn't look for a non-existent file.
+
+3. **JSX special characters in text content (TS1003, TS1382)**
+   - **CRITICAL**: Characters like \`>\`, \`<\`, \`&\`, \`"\`, and \`'\` in JSX text content MUST be escaped or wrapped in curly braces.
+   - **WRONG** ❌:
+     - \`<button>Click here ></button>\` → **TypeScript error: Unexpected token**
+     - \`<div>5 > 3</div>\` → **Fails to compile**
+     - \`<p>Use & to connect</p>\` → **Build error**
+   - **CORRECT** ✅:
+     - \`<button>Click here {'>'}</button>\` → Use JSX expression
+     - \`<button>Click here &gt;</button>\` → Use HTML entity
+     - \`<div>{5 > 3 ? 'yes' : 'no'}</div>\` → Use JavaScript expression
+     - \`<div>5 &gt; 3</div>\` → Use HTML entity
+     - \`<p>Use &amp; to connect</p>\` → Use HTML entity
+   - **SAFE PATTERN** (recommended for arrows and symbols):
+     - Use **text strings in JSX expressions**: \`{'>'}\`, \`{'<'}\`, \`{'&'}\`
+     - Or use **HTML entities**: \`&gt;\`, \`&lt;\`, \`&amp;\`, \`&quot;\`, \`&apos;\`
+     - Or use **Unicode/emoji**: \`→\`, \`←\`, \`✓\`, \`✗\`
+   - **COMMON CASES**:
+     - Button text: \`<Button>Next →</Button>\` or \`<Button>Next {'>'}</Button>\`
+     - Math expressions: \`<span>x &gt; 5</span>\` or \`<span>x {'>'} 5</span>\`
+     - Comparisons: \`<p>A &gt; B</p>\` or \`<p>A {'>'} B</p>\`
+     - HTML tags as text: \`<code>&lt;div&gt;</code>\` or \`<code>{'<div>'}</code>\`
 
 # CODE STRUCTURE
 
