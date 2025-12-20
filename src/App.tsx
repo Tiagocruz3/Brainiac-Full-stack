@@ -9,10 +9,12 @@ import { RepoManager } from './components/RepoManager';
 import { CodeViewer } from './components/CodeViewer';
 import { PreviewLoading } from './components/PreviewLoading';
 import { PreviewIframe } from './components/PreviewIframe';
+import { PreviewError } from './components/PreviewError';
 import { Settings as SettingsType, AgentMessage, BuildStatus, ProjectHistory as ProjectHistoryType } from './types';
 import { hasValidSettings, loadHistory, loadSettings, saveProject } from './lib/storage';
 import { generateId } from './lib/utils';
 import { runAgent } from './lib/agent';
+import { previewErrorHandler, PreviewError as PreviewErrorType } from './lib/preview-errors';
 
 function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -37,6 +39,7 @@ function App() {
   const [currentDeploymentUrl, setCurrentDeploymentUrl] = useState<string>('');
   const [filesGenerated, setFilesGenerated] = useState<number>(0);
   const [totalFiles, setTotalFiles] = useState<number>(0);
+  const [previewError, setPreviewError] = useState<PreviewErrorType | null>(null);
 
   useEffect(() => {
     // Check if settings exist on mount
@@ -99,6 +102,7 @@ function App() {
       const projectId = `project-${Date.now()}`;
       setCurrentProjectId(projectId);
       setPreviewFiles(null); // Clear previous preview
+      setPreviewError(null); // Clear previous errors
       setCurrentProjectName(message.slice(0, 50));
       setCurrentDeploymentUrl('');
       setFilesGenerated(0);
@@ -177,9 +181,17 @@ function App() {
         setCurrentProject(result.data.projectContext);
       }
 
-      // Update deployment URL if available
+      // Update deployment URL if available with error handling
       if (result.data?.vercelUrl) {
-        setCurrentDeploymentUrl(result.data.vercelUrl);
+        try {
+          setCurrentDeploymentUrl(result.data.vercelUrl);
+          console.log('✅ Deployment URL set:', result.data.vercelUrl);
+        } catch (deployError) {
+          console.error('❌ Failed to set deployment URL:', deployError);
+          const error = previewErrorHandler.createError(deployError, 'deployment');
+          setPreviewError(error);
+          console.log(previewErrorHandler.formatForLogging(error));
+        }
       }
 
       // Save to history
@@ -260,6 +272,38 @@ function App() {
     setProjectHistory([]);
   };
 
+  const handleRetryPreview = () => {
+    console.log('🔄 Retrying preview...');
+    setPreviewError(null);
+    
+    // If we have the deployment URL, try reloading it
+    if (currentDeploymentUrl) {
+      // Force iframe reload by updating the key
+      setCurrentDeploymentUrl('');
+      setTimeout(() => {
+        setCurrentDeploymentUrl(currentDeploymentUrl);
+      }, 100);
+    }
+  };
+
+  const handleClearCacheAndRetry = () => {
+    console.log('🗑️ Clearing cache and retrying...');
+    
+    // Clear all preview-related state
+    setPreviewFiles(null);
+    setPreviewError(null);
+    setCurrentDeploymentUrl('');
+    setFilesGenerated(0);
+    
+    // Reset error handler retry counters
+    previewErrorHandler.resetRetries(currentProjectId);
+    
+    // Wait a moment then try again
+    setTimeout(() => {
+      handleRetryPreview();
+    }, 500);
+  };
+
   return (
     <div className="flex h-screen bg-black text-white">
       {/* Compact Sidebar */}
@@ -310,7 +354,7 @@ function App() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col md:flex-row gap-4 overflow-hidden">
         {/* Chat Column */}
-        <div className={`flex flex-col ${(previewFiles || currentDeploymentUrl) ? 'md:w-1/2' : 'w-full'} transition-all duration-300`}>
+        <div className={`flex flex-col ${(previewFiles || currentDeploymentUrl || previewError) ? 'md:w-1/2' : 'w-full'} transition-all duration-300`}>
           <Chat
             messages={messages}
             onSendMessage={handleSendMessage}
@@ -322,8 +366,8 @@ function App() {
           />
         </div>
 
-        {/* Code Viewer + Live Preview Column */}
-        {(isGenerating || previewFiles || currentDeploymentUrl) && (
+        {/* Code Viewer + Live Preview + Error Column */}
+        {(isGenerating || previewFiles || currentDeploymentUrl || previewError) && (
           <div className="flex flex-col md:w-1/2 gap-4 animate-in slide-in-from-right overflow-hidden">
             {/* Loading State - Show while building and before files are generated */}
             {isGenerating && !previewFiles && (
@@ -350,11 +394,22 @@ function App() {
             )}
             
             {/* Live Preview Iframe - Show when deployment URL is available */}
-            {currentDeploymentUrl && (
+            {currentDeploymentUrl && !previewError && (
               <div className="flex-1 min-h-0">
                 <PreviewIframe
                   url={currentDeploymentUrl}
                   projectName={currentProjectName || 'Generated App'}
+                />
+              </div>
+            )}
+
+            {/* Preview Error - Show when an error occurs */}
+            {previewError && (
+              <div className="flex-1 min-h-0">
+                <PreviewError
+                  error={previewError}
+                  onRetry={handleRetryPreview}
+                  onClearCache={handleClearCacheAndRetry}
                 />
               </div>
             )}
