@@ -346,16 +346,26 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
           <div className="flex-1 overflow-hidden bg-[#1e1e1e] relative">
             {selectedFileContent ? (
               <>
-                <LazyMonacoEditor
-                  value={displayedContent}
-                  language={getMonacoLanguage(selectedFile!)}
-                  readOnly={true}
-                  className="h-full"
-                  onMount={(editor) => {
-                    editorRef.current = editor;
-                    console.log('✅ Monaco editor mounted for file:', selectedFile);
-                  }}
-                />
+                {/* Show typing animation with pre element for smooth updates */}
+                {isTyping ? (
+                  <div className="h-full overflow-auto p-4 font-mono text-sm text-zinc-300 whitespace-pre-wrap">
+                    {displayedContent}
+                    <span className="inline-block w-2 h-4 bg-purple-500 animate-pulse ml-0.5" />
+                  </div>
+                ) : (
+                  <LazyMonacoEditor
+                    key={selectedFile} // Force remount on file change
+                    value={displayedContent || selectedFileContent}
+                    language={getMonacoLanguage(selectedFile!)}
+                    readOnly={true}
+                    className="h-full"
+                    immediate={true} // Load immediately, no delay
+                    onMount={(editor) => {
+                      editorRef.current = editor;
+                      console.log('✅ Monaco editor mounted for file:', selectedFile);
+                    }}
+                  />
+                )}
                 {isTyping && (
                   <div className="absolute top-2 right-2 flex items-center gap-2 px-2 py-1 bg-purple-500/10 border border-purple-500/20 rounded text-xs text-purple-400">
                     <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" />

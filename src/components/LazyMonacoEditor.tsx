@@ -20,6 +20,7 @@ interface LazyMonacoEditorProps {
   readOnly?: boolean;
   className?: string;
   onMount?: (editor: any, monaco: any) => void;
+  immediate?: boolean; // Skip lazy loading delay
 }
 
 export const LazyMonacoEditor: React.FC<LazyMonacoEditorProps> = ({
@@ -29,18 +30,24 @@ export const LazyMonacoEditor: React.FC<LazyMonacoEditorProps> = ({
   readOnly = true,
   className = '',
   onMount,
+  immediate = false,
 }) => {
-  const [shouldLoad, setShouldLoad] = useState(false);
+  const [shouldLoad, setShouldLoad] = useState(immediate);
   const [mounted, setMounted] = useState(false);
 
-  // Delay loading slightly to prioritize initial render
+  // Delay loading slightly to prioritize initial render (unless immediate)
   useEffect(() => {
+    if (immediate) {
+      setShouldLoad(true);
+      return;
+    }
+    
     const timer = setTimeout(() => {
       setShouldLoad(true);
     }, 100);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [immediate]);
 
   // Track mount status for cleanup
   useEffect(() => {
