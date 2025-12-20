@@ -60,6 +60,19 @@ export const PreviewToolbar: React.FC<PreviewToolbarProps> = ({
   const [copied, setCopied] = useState(false);
   const [showDeviceMenu, setShowDeviceMenu] = useState(false);
   const [customDimensions, setCustomDimensions] = useState({ width: 1920, height: 1080 });
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleCopyUrl = async () => {
     try {
@@ -98,6 +111,53 @@ export const PreviewToolbar: React.FC<PreviewToolbarProps> = ({
     setShowDeviceMenu(false);
   };
 
+  // Mobile simplified toolbar
+  if (isMobile) {
+    return (
+      <div className={cn('flex items-center justify-between gap-2 px-3 py-3 bg-zinc-900/90 border-b border-zinc-800 backdrop-blur-sm', className)}>
+        {/* Left: Essential controls */}
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onRefresh}
+            className="h-9 w-9 p-0"
+            title="Refresh preview"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleCopyUrl}
+            className="h-9 w-9 p-0"
+            title="Copy URL"
+          >
+            {copied ? (
+              <Check className="h-4 w-4 text-green-500" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onOpenInNewTab}
+            className="h-9 w-9 p-0"
+            title="Open in new tab"
+          >
+            <ExternalLink className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop full toolbar
   return (
     <div className={cn('flex items-center justify-between gap-2 px-3 py-2 bg-zinc-900/90 border-b border-zinc-800 backdrop-blur-sm', className)}>
       {/* Left: Device & Controls */}

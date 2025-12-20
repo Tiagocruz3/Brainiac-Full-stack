@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings as SettingsIcon } from 'lucide-react';
+import { Settings as SettingsIcon, Menu, X } from 'lucide-react';
 import { Button } from './components/ui/Button';
 import { Settings } from './components/Settings';
 import { Chat } from './components/Chat';
@@ -10,6 +10,7 @@ import { CodeViewer } from './components/CodeViewer';
 import { PreviewLoading } from './components/PreviewLoading';
 import { PreviewIframe } from './components/PreviewIframe';
 import { PreviewError } from './components/PreviewError';
+import { SplitPane } from './components/SplitPane';
 import { Settings as SettingsType, AgentMessage, BuildStatus, ProjectHistory as ProjectHistoryType } from './types';
 import { hasValidSettings, loadHistory, loadSettings, saveProject } from './lib/storage';
 import { generateId } from './lib/utils';
@@ -42,6 +43,7 @@ function App() {
   const [filesGenerated, setFilesGenerated] = useState<number>(0);
   const [totalFiles, setTotalFiles] = useState<number>(0);
   const [previewError, setPreviewError] = useState<PreviewErrorType | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Performance optimization hooks
   const previewOptimization = usePreviewOptimization({
@@ -386,9 +388,33 @@ function App() {
   }, []);
 
   return (
-    <div className="flex h-screen bg-black text-white">
-      {/* Compact Sidebar */}
-      <div className="w-72 border-r border-zinc-800/50 flex flex-col bg-zinc-950/30 backdrop-blur-xl">
+    <div className="flex h-screen bg-black text-white overflow-hidden">
+      {/* Mobile Menu Button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setSidebarOpen(true)}
+        className="md:hidden fixed top-4 left-4 z-40 h-10 w-10 bg-zinc-900/90 backdrop-blur-sm border border-zinc-800 shadow-lg"
+        aria-label="Open menu"
+      >
+        <Menu className="h-5 w-5" />
+      </Button>
+
+      {/* Sidebar Overlay (Mobile) */}
+      {sidebarOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <div className={`
+        w-72 border-r border-zinc-800/50 flex flex-col bg-zinc-950/30 backdrop-blur-xl
+        md:relative fixed inset-y-0 left-0 z-50
+        transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
         {/* Compact Header */}
         <div className="p-4 border-b border-zinc-800/50">
           <div className="flex items-center justify-between mb-3">
@@ -401,17 +427,29 @@ function App() {
                 <p className="text-xs text-zinc-500">AI App Builder</p>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSettingsOpen(true)}
-              className="h-8 w-8 relative"
-            >
-              <SettingsIcon className="h-4 w-4" />
-              {!hasSettings && (
-                <span className="absolute top-0.5 right-0.5 h-2 w-2 bg-red-500 rounded-full animate-pulse" />
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSettingsOpen(true)}
+                className="h-8 w-8 relative"
+              >
+                <SettingsIcon className="h-4 w-4" />
+                {!hasSettings && (
+                  <span className="absolute top-0.5 right-0.5 h-2 w-2 bg-red-500 rounded-full animate-pulse" />
+                )}
+              </Button>
+              {/* Close button (mobile only) */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(false)}
+                className="h-8 w-8 md:hidden"
+                aria-label="Close menu"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           
           {!hasSettings && (
@@ -427,75 +465,62 @@ function App() {
           <ProjectHistory 
             projects={projectHistory}
             onClearHistory={handleClearHistory}
-            onOpenRepoManager={() => setRepoManagerOpen(true)}
+            onOpenRepoManager={() => {
+              setRepoManagerOpen(true);
+              setSidebarOpen(false);
+            }}
           />
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col md:flex-row gap-4 overflow-hidden">
-        {/* Chat Column */}
-        <div className={`flex flex-col ${(previewFiles || currentDeploymentUrl || previewError) ? 'md:w-1/2' : 'w-full'} transition-all duration-300`}>
-          <Chat
-            messages={messages}
-            onSendMessage={handleSendMessage}
-            isBuilding={isGenerating}
-            buildStatus={buildStatus}
-            onStopGeneration={handleStopGeneration}
-            selectedModel={selectedModel}
-            onModelChange={setSelectedModel}
-          />
-        </div>
-
-        {/* Code Viewer + Live Preview + Error Column */}
-        {(isGenerating || previewFiles || currentDeploymentUrl || previewError) && (
-          <div className="flex flex-col md:w-1/2 gap-4 animate-in slide-in-from-right overflow-hidden">
-            {/* Loading State - Show while building and before files are generated */}
-            {isGenerating && !previewFiles && (
-              <div className="flex-1 min-h-0">
-                <PreviewLoading
-                  stage={buildStatus.stage}
-                  filesGenerated={filesGenerated}
-                  totalFiles={totalFiles}
-                  message={buildStatus.message || 'Preparing preview...'}
-                />
-              </div>
-            )}
-
-            {/* Code Viewer - Show when files are generated */}
-            {previewFiles && currentProjectId && (
-              <div className="flex-1 min-h-0">
-                <CodeViewer
-                  files={previewFiles}
-                  projectName={currentProjectName || 'Generated App'}
-                  deploymentUrl={currentDeploymentUrl}
-                  className="h-full"
-                />
-              </div>
-            )}
-            
-            {/* Live Preview Iframe - Show when deployment URL is available */}
-            {currentDeploymentUrl && !previewError && (
-              <div className="flex-1 min-h-0">
-                <PreviewIframe
-                  url={currentDeploymentUrl}
-                  projectName={currentProjectName || 'Generated App'}
-                />
-              </div>
-            )}
-
-            {/* Preview Error - Show when an error occurs */}
-            {previewError && (
-              <div className="flex-1 min-h-0">
-                <PreviewError
-                  error={previewError}
-                  onRetry={handleRetryPreview}
-                  onClearCache={handleClearCacheAndRetry}
-                />
-              </div>
-            )}
-          </div>
-        )}
+      {/* Main Content - Responsive SplitPane */}
+      <div className="flex-1 overflow-hidden md:ml-0">
+        <SplitPane
+          chatContent={
+            <Chat
+              messages={messages}
+              onSendMessage={handleSendMessage}
+              isBuilding={isGenerating}
+              buildStatus={buildStatus}
+              onStopGeneration={handleStopGeneration}
+              selectedModel={selectedModel}
+              onModelChange={setSelectedModel}
+            />
+          }
+          codeContent={
+            // Show loading state, code viewer, or error
+            isGenerating && !previewFiles && !currentDeploymentUrl ? (
+              <PreviewLoading
+                stage={buildStatus.stage}
+                filesGenerated={filesGenerated}
+                totalFiles={totalFiles}
+                message={buildStatus.message || 'Preparing preview...'}
+              />
+            ) : previewFiles && currentProjectId ? (
+              <CodeViewer
+                files={previewFiles}
+                projectName={currentProjectName || 'Generated App'}
+                deploymentUrl={currentDeploymentUrl}
+                className="h-full"
+              />
+            ) : null
+          }
+          previewContent={
+            // Show preview iframe or error
+            currentDeploymentUrl && !previewError ? (
+              <PreviewIframe
+                url={currentDeploymentUrl}
+                projectName={currentProjectName || 'Generated App'}
+              />
+            ) : previewError ? (
+              <PreviewError
+                error={previewError}
+                onRetry={handleRetryPreview}
+                onClearCache={handleClearCacheAndRetry}
+              />
+            ) : null
+          }
+        />
       </div>
 
       {/* Settings Modal */}
