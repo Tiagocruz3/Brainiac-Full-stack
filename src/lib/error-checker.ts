@@ -7,12 +7,32 @@
 
 export interface ErrorPattern {
   id: string;
-  category: 'typescript' | 'react' | 'tailwind' | 'import' | 'jsx' | 'env';
+  category: 'typescript' | 'react' | 'tailwind' | 'import' | 'jsx' | 'env' | 'package';
   pattern: RegExp | null; // null for file-level checks
   description: string;
   severity: 'error' | 'warning';
   examples: string[];
   autoFix: ((code: string, match?: RegExpMatchArray) => string) | null;
+}
+
+export interface PackageJsonError {
+  id: string;
+  category: 'package';
+  pattern: RegExp | null;
+  description: string;
+  severity: 'error' | 'warning';
+  examples: string[];
+  autoFix: ((packageJson: PackageJson, extra?: string) => PackageJson) | null;
+}
+
+export interface PackageJson {
+  name?: string;
+  version?: string;
+  type?: string;
+  scripts?: Record<string, string>;
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  [key: string]: unknown;
 }
 
 export interface DetectedError {
@@ -450,6 +470,173 @@ const envErrors: ErrorPattern[] = [
 ];
 
 // =============================================================================
+// CATEGORY 5: PACKAGE.JSON ERRORS
+// =============================================================================
+
+const packageJsonErrors: PackageJsonError[] = [
+  {
+    id: 'missing-dependency',
+    category: 'package',
+    pattern: /Cannot find package '([^']+)'/,
+    description: 'Package used but not in dependencies',
+    severity: 'error',
+    examples: [
+      '❌ import x from "lodash"  // Not in package.json',
+      '✅ Add to package.json dependencies',
+    ],
+    autoFix: (packageJson, missingPkg) => {
+      if (!missingPkg) return packageJson;
+      packageJson.dependencies = packageJson.dependencies || {};
+      // Use known stable versions for common packages
+      const knownVersions: Record<string, string> = {
+        'lodash': '^4.17.21',
+        'axios': '^1.6.0',
+        'date-fns': '^3.0.0',
+        'uuid': '^9.0.0',
+        'clsx': '^2.1.0',
+        'tailwind-merge': '^2.2.0',
+        'class-variance-authority': '^0.7.0',
+        '@tanstack/react-query': '^5.0.0',
+        'zustand': '^4.5.0',
+        'react-router-dom': '^6.22.0',
+        'framer-motion': '^11.0.0',
+      };
+      packageJson.dependencies[missingPkg] = knownVersions[missingPkg] || 'latest';
+      return packageJson;
+    }
+  },
+  {
+    id: 'version-conflict-react',
+    category: 'package',
+    pattern: /Conflicting peer dependency|react-dom.*requires.*react@/i,
+    description: 'React/React-DOM version mismatch',
+    severity: 'error',
+    examples: [
+      '❌ react: 18.0.0, react-dom: 17.0.0',
+      '✅ react: 18.0.0, react-dom: 18.0.0',
+    ],
+    autoFix: (packageJson) => {
+      const reactVersion = packageJson.dependencies?.react;
+      if (reactVersion && packageJson.dependencies) {
+        packageJson.dependencies['react-dom'] = reactVersion;
+      }
+      return packageJson;
+    }
+  },
+  {
+    id: 'wrong-build-command',
+    category: 'package',
+    pattern: /react-scripts.*not found|craco.*not found/i,
+    description: 'Build command incorrect for Vite framework',
+    severity: 'error',
+    examples: [
+      '❌ build: "react-scripts build"  // Using Vite',
+      '✅ build: "vite build"',
+    ],
+    autoFix: (packageJson) => {
+      packageJson.scripts = packageJson.scripts || {};
+      packageJson.scripts.build = 'tsc && vite build';
+      packageJson.scripts.dev = 'vite';
+      packageJson.scripts.preview = 'vite preview';
+      return packageJson;
+    }
+  },
+  {
+    id: 'missing-type-module',
+    category: 'package',
+    pattern: /SyntaxError: Cannot use import statement outside a module/,
+    description: 'Missing "type": "module" in package.json',
+    severity: 'error',
+    examples: [
+      '❌ No "type" field in package.json',
+      '✅ "type": "module"',
+    ],
+    autoFix: (packageJson) => {
+      packageJson.type = 'module';
+      return packageJson;
+    }
+  },
+  {
+    id: 'missing-vite-dep',
+    category: 'package',
+    pattern: /vite.*not found|Cannot find module 'vite'/i,
+    description: 'Vite not in devDependencies',
+    severity: 'error',
+    examples: [
+      '❌ devDependencies without vite',
+      '✅ devDependencies: { "vite": "^5.0.0" }',
+    ],
+    autoFix: (packageJson) => {
+      packageJson.devDependencies = packageJson.devDependencies || {};
+      packageJson.devDependencies.vite = '^5.0.0';
+      packageJson.devDependencies['@vitejs/plugin-react'] = '^4.2.0';
+      return packageJson;
+    }
+  },
+  {
+    id: 'missing-typescript-dep',
+    category: 'package',
+    pattern: /tsc.*not found|Cannot find module 'typescript'/i,
+    description: 'TypeScript not in devDependencies',
+    severity: 'error',
+    examples: [
+      '❌ devDependencies without typescript',
+      '✅ devDependencies: { "typescript": "^5.0.0" }',
+    ],
+    autoFix: (packageJson) => {
+      packageJson.devDependencies = packageJson.devDependencies || {};
+      packageJson.devDependencies.typescript = '^5.3.0';
+      packageJson.devDependencies['@types/react'] = '^18.2.0';
+      packageJson.devDependencies['@types/react-dom'] = '^18.2.0';
+      return packageJson;
+    }
+  },
+  {
+    id: 'duplicate-dependency',
+    category: 'package',
+    pattern: null, // File check
+    description: 'Same package in dependencies and devDependencies',
+    severity: 'warning',
+    examples: [
+      '❌ dependencies: { react: "18" }, devDependencies: { react: "17" }',
+      '✅ Only in dependencies OR devDependencies',
+    ],
+    autoFix: (packageJson) => {
+      // Remove duplicates from devDependencies, keep in dependencies
+      if (packageJson.dependencies && packageJson.devDependencies) {
+        for (const dep of Object.keys(packageJson.dependencies)) {
+          if (dep in packageJson.devDependencies) {
+            delete packageJson.devDependencies[dep];
+          }
+        }
+      }
+      return packageJson;
+    }
+  },
+  {
+    id: 'invalid-package-name',
+    category: 'package',
+    pattern: null, // File check
+    description: 'Package name contains invalid characters',
+    severity: 'error',
+    examples: [
+      '❌ name: "My App!"',
+      '✅ name: "my-app"',
+    ],
+    autoFix: (packageJson) => {
+      if (packageJson.name) {
+        packageJson.name = packageJson.name
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-')
+          .replace(/--+/g, '-')
+          .replace(/^-|-$/g, '');
+      }
+      return packageJson;
+    }
+  },
+];
+
+// =============================================================================
 // ALL ERROR PATTERNS
 // =============================================================================
 
@@ -616,11 +803,168 @@ export function autoFixErrors(code: string, errors: DetectedError[]): {
   return { fixedCode, fixedCount, remainingErrors };
 }
 
+// =============================================================================
+// PACKAGE.JSON CHECKING AND FIXING
+// =============================================================================
+
+/**
+ * Pre-check package.json for common issues
+ */
+export function preCheckPackageJson(packageJson: PackageJson): DetectedError[] {
+  const errors: DetectedError[] = [];
+  
+  // Check for invalid package name
+  if (packageJson.name && /[A-Z!@#$%^&*()+=\[\]{}|\\:;"'<>,?\/]/.test(packageJson.name)) {
+    errors.push({
+      id: 'invalid-package-name',
+      message: `Package name "${packageJson.name}" contains invalid characters`,
+      severity: 'error',
+      canAutoFix: true,
+    });
+  }
+  
+  // Check for duplicate dependencies
+  if (packageJson.dependencies && packageJson.devDependencies) {
+    const duplicates = Object.keys(packageJson.dependencies).filter(
+      dep => dep in (packageJson.devDependencies || {})
+    );
+    if (duplicates.length > 0) {
+      errors.push({
+        id: 'duplicate-dependency',
+        message: `Packages in both dependencies and devDependencies: ${duplicates.join(', ')}`,
+        severity: 'warning',
+        canAutoFix: true,
+      });
+    }
+  }
+  
+  // Check for React/React-DOM version mismatch
+  if (packageJson.dependencies?.react && packageJson.dependencies?.['react-dom']) {
+    const reactVersion = packageJson.dependencies.react.replace(/[^0-9.]/g, '');
+    const reactDomVersion = packageJson.dependencies['react-dom'].replace(/[^0-9.]/g, '');
+    if (reactVersion.split('.')[0] !== reactDomVersion.split('.')[0]) {
+      errors.push({
+        id: 'version-conflict-react',
+        message: `React (${reactVersion}) and React-DOM (${reactDomVersion}) major versions don't match`,
+        severity: 'error',
+        canAutoFix: true,
+      });
+    }
+  }
+  
+  // Check for wrong build commands (using CRA commands in Vite project)
+  if (packageJson.scripts?.build?.includes('react-scripts')) {
+    errors.push({
+      id: 'wrong-build-command',
+      message: 'Build command uses react-scripts but this is a Vite project',
+      severity: 'error',
+      canAutoFix: true,
+    });
+  }
+  
+  // Check for missing Vite in devDependencies when scripts use vite
+  if (packageJson.scripts?.dev?.includes('vite') || packageJson.scripts?.build?.includes('vite')) {
+    if (!packageJson.devDependencies?.vite && !packageJson.dependencies?.vite) {
+      errors.push({
+        id: 'missing-vite-dep',
+        message: 'Scripts use vite but vite is not in dependencies',
+        severity: 'error',
+        canAutoFix: true,
+      });
+    }
+  }
+  
+  // Check for missing TypeScript when tsconfig exists or tsc is used
+  if (packageJson.scripts?.build?.includes('tsc')) {
+    if (!packageJson.devDependencies?.typescript && !packageJson.dependencies?.typescript) {
+      errors.push({
+        id: 'missing-typescript-dep',
+        message: 'Build uses tsc but typescript is not in devDependencies',
+        severity: 'error',
+        canAutoFix: true,
+      });
+    }
+  }
+  
+  return errors;
+}
+
+/**
+ * Detect package.json errors from build output
+ */
+export function detectPackageErrorsFromBuildOutput(buildOutput: string): DetectedError[] {
+  const errors: DetectedError[] = [];
+  
+  for (const pattern of packageJsonErrors) {
+    if (!pattern.pattern) continue;
+    
+    const match = buildOutput.match(pattern.pattern);
+    if (match) {
+      errors.push({
+        id: pattern.id,
+        message: pattern.description + (match[1] ? `: ${match[1]}` : ''),
+        severity: pattern.severity,
+        canAutoFix: pattern.autoFix !== null,
+      });
+    }
+  }
+  
+  return errors;
+}
+
+/**
+ * Auto-fix package.json errors
+ */
+export function autoFixPackageJson(
+  packageJson: PackageJson, 
+  errors: DetectedError[],
+  buildOutput?: string
+): {
+  fixedPackageJson: PackageJson;
+  fixedCount: number;
+  remainingErrors: DetectedError[];
+} {
+  let fixedPackageJson = { ...packageJson };
+  let fixedCount = 0;
+  const remainingErrors: DetectedError[] = [];
+  
+  for (const error of errors) {
+    const pattern = packageJsonErrors.find(p => p.id === error.id);
+    if (pattern?.autoFix) {
+      const beforeFix = JSON.stringify(fixedPackageJson);
+      
+      // Extract extra info from build output if needed
+      let extra: string | undefined;
+      if (pattern.pattern && buildOutput) {
+        const match = buildOutput.match(pattern.pattern);
+        extra = match?.[1];
+      }
+      
+      fixedPackageJson = pattern.autoFix(fixedPackageJson, extra);
+      
+      if (JSON.stringify(fixedPackageJson) !== beforeFix) {
+        fixedCount++;
+      } else {
+        remainingErrors.push(error);
+      }
+    } else {
+      remainingErrors.push(error);
+    }
+  }
+  
+  return { fixedPackageJson, fixedCount, remainingErrors };
+}
+
+/**
+ * Get all package.json error patterns (for export)
+ */
+export const PACKAGE_JSON_ERROR_PATTERNS = packageJsonErrors;
+
 /**
  * Generate error summary for system prompt
  */
 export function generateErrorKnowledgeBase(): string {
-  const categories = {
+  const codeCategories: Record<string, ErrorPattern[]> = {
     'TypeScript Syntax': typescriptSyntaxErrors,
     'TypeScript Types': typescriptTypeErrors,
     'Imports/Exports': importExportErrors,
@@ -631,7 +975,8 @@ export function generateErrorKnowledgeBase(): string {
   
   let summary = '# PRE-DEPLOYMENT ERROR CHECKLIST\n\n';
   
-  for (const [category, patterns] of Object.entries(categories)) {
+  // Code errors
+  for (const [category, patterns] of Object.entries(codeCategories)) {
     summary += `## ${category} Errors\n\n`;
     for (const pattern of patterns) {
       summary += `### ${pattern.id} (${pattern.severity})\n`;
@@ -644,15 +989,31 @@ export function generateErrorKnowledgeBase(): string {
     }
   }
   
+  // Package.json errors
+  summary += `## Package.json Errors\n\n`;
+  for (const pattern of packageJsonErrors) {
+    summary += `### ${pattern.id} (${pattern.severity})\n`;
+    summary += `${pattern.description}\n`;
+    summary += `Examples:\n`;
+    pattern.examples.forEach(ex => {
+      summary += `- ${ex}\n`;
+    });
+    summary += '\n';
+  }
+  
   return summary;
 }
 
 // Export for use in agent
 export const ERROR_CHECKER = {
   patterns: ALL_ERROR_PATTERNS,
+  packagePatterns: packageJsonErrors,
   detectFromBuildOutput: detectErrorsFromBuildOutput,
+  detectPackageErrors: detectPackageErrorsFromBuildOutput,
   preCheck: preCheckCode,
+  preCheckPackage: preCheckPackageJson,
   autoFix: autoFixErrors,
+  autoFixPackage: autoFixPackageJson,
   generateKnowledgeBase: generateErrorKnowledgeBase,
 };
 
