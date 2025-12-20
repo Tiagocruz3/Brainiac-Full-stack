@@ -5,12 +5,11 @@
  * Similar to v0.dev and bolt.new
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { File, Folder, FolderOpen, Copy, Check, ExternalLink } from 'lucide-react';
 import { Button } from './ui/Button';
 import { cn } from '@/lib/utils';
 import { LazyMonacoEditor, useMonacoPreload } from './LazyMonacoEditor';
-import { usePerformanceMonitor } from '@/hooks/usePreviewOptimization';
 
 export interface CodeViewerProps {
   files: Record<string, string>;
@@ -38,13 +37,15 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['root', 'src', 'src/components', 'src/components/ui', 'src/lib']));
   const [displayedContent, setDisplayedContent] = useState<string>('');
   const [isTyping, setIsTyping] = useState(false);
-  const [animatedFiles, setAnimatedFiles] = useState<Set<string>>(new Set());
+  
+  // Use ref to persist animated files across re-renders without causing re-renders
+  const animatedFilesRef = useRef<Set<string>>(new Set());
+  const typingIntervalRef = useRef<number | null>(null);
+  const editorRef = useRef<any>(null);
+  const mountedRef = useRef(true);
   
   // Optimization hooks
   const { preload: preloadMonaco } = useMonacoPreload();
-  const performanceMonitor = usePerformanceMonitor('CodeViewer');
-  const editorRef = useRef<any>(null);
-  const typingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Build file tree from flat file list
   const buildFileTree = (files: Record<string, string>): FileNode => {
@@ -182,21 +183,26 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
   };
 
   const selectedFileContent = selectedFile ? files[selectedFile] : null;
-  const defaultFile = Object.keys(files).find(f => f.includes('App.tsx') || f.includes('App.jsx')) || Object.keys(files)[0];
+  const defaultFile = useMemo(() => 
+    Object.keys(files).find(f => f.includes('App.tsx') || f.includes('App.jsx')) || Object.keys(files)[0],
+    [files]
+  );
   
-  // Reset animated files when new files are generated
-  React.useEffect(() => {
-    setAnimatedFiles(new Set());
-  }, [files]);
-  
-  React.useEffect(() => {
+  // Select default file on mount
+  useEffect(() => {
     if (!selectedFile && defaultFile) {
       setSelectedFile(defaultFile);
     }
   }, [defaultFile, selectedFile]);
 
-  // Typing animation effect
-  React.useEffect(() => {
+  // Typing animation effect - simplified and stable
+  useEffect(() => {
+    // Clear any existing interval
+    if (typingIntervalRef.current) {
+      window.clearInterval(typingIntervalRef.current);
+      typingIntervalRef.current = null;
+    }
+
     if (!selectedFileContent || !selectedFile) {
       setDisplayedContent('');
       setIsTyping(false);
@@ -204,71 +210,80 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
     }
 
     // If this file has already been animated, show it instantly
-    if (animatedFiles.has(selectedFile)) {
+    if (animatedFilesRef.current.has(selectedFile)) {
       setDisplayedContent(selectedFileContent);
       setIsTyping(false);
       return;
     }
 
     // First time viewing this file - play typing animation
+    console.log('🎬 Starting typing animation for:', selectedFile);
     setDisplayedContent('');
     setIsTyping(true);
-    let currentIndex = 0;
-    const typingSpeed = 3; // Characters per frame (faster = higher number)
     
-    const typeInterval = setInterval(() => {
-      if (currentIndex >= selectedFileContent.length) {
+    let currentIndex = 0;
+    const content = selectedFileContent;
+    const typingSpeed = 8; // Characters per frame (faster = higher number)
+    
+    typingIntervalRef.current = window.setInterval(() => {
+      if (!mountedRef.current) {
+        if (typingIntervalRef.current) {
+          window.clearInterval(typingIntervalRef.current);
+        }
+        return;
+      }
+
+      if (currentIndex >= content.length) {
         setIsTyping(false);
-        clearInterval(typeInterval);
-        // Mark this file as animated
-        setAnimatedFiles(prev => new Set(prev).add(selectedFile));
+        if (typingIntervalRef.current) {
+          window.clearInterval(typingIntervalRef.current);
+          typingIntervalRef.current = null;
+        }
+        // Mark this file as animated (using ref to avoid re-renders)
+        animatedFilesRef.current.add(selectedFile);
+        console.log('✅ Typing animation complete for:', selectedFile);
         return;
       }
 
       // Type multiple characters at once for smoother animation
-      const nextIndex = Math.min(currentIndex + typingSpeed, selectedFileContent.length);
-      setDisplayedContent(selectedFileContent.substring(0, nextIndex));
+      const nextIndex = Math.min(currentIndex + typingSpeed, content.length);
+      setDisplayedContent(content.substring(0, nextIndex));
       currentIndex = nextIndex;
     }, 16); // ~60fps
 
     return () => {
-      clearInterval(typeInterval);
-      setIsTyping(false);
+      if (typingIntervalRef.current) {
+        window.clearInterval(typingIntervalRef.current);
+        typingIntervalRef.current = null;
+      }
     };
-  }, [selectedFileContent, selectedFile, animatedFiles]);
+  }, [selectedFile, selectedFileContent]);
 
-  // Cleanup on unmount
+  // Track mounted state and cleanup
   useEffect(() => {
+    mountedRef.current = true;
     console.log('🎨 CodeViewer mounted');
-    performanceMonitor.start();
 
     return () => {
-      console.log('🧹 CodeViewer unmounting - cleaning up resources...');
+      mountedRef.current = false;
+      console.log('🧹 CodeViewer unmounting');
+      
+      // Clear typing interval
+      if (typingIntervalRef.current) {
+        window.clearInterval(typingIntervalRef.current);
+        typingIntervalRef.current = null;
+      }
       
       // Dispose Monaco editor
       if (editorRef.current) {
         try {
           editorRef.current.dispose();
-          console.log('✅ Monaco editor disposed');
-        } catch (error) {
-          console.error('❌ Error disposing Monaco editor:', error);
+        } catch (e) {
+          // Ignore disposal errors
         }
       }
-      
-      // Clear typing timer
-      if (typingTimerRef.current) {
-        clearTimeout(typingTimerRef.current);
-        typingTimerRef.current = null;
-      }
-      
-      // Clear state
-      setDisplayedContent('');
-      setAnimatedFiles(new Set());
-      
-      performanceMonitor.end();
-      console.log('✅ CodeViewer cleanup complete');
     };
-  }, [performanceMonitor]);
+  }, []);
 
   // Preload Monaco on hover for better UX
   const handleMouseEnter = () => {
@@ -346,30 +361,36 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
           <div className="flex-1 overflow-hidden bg-[#1e1e1e] relative min-h-0">
             {selectedFileContent ? (
               <>
-                {/* Show typing animation with pre element for smooth updates */}
-                {isTyping ? (
-                  <div className="absolute inset-0 overflow-auto p-4 font-mono text-sm text-zinc-300 whitespace-pre-wrap">
-                    {displayedContent}
-                    <span className="inline-block w-2 h-4 bg-purple-500 animate-pulse ml-0.5" />
+                {/* Typing animation with blinking cursor */}
+                {isTyping && (
+                  <div className="absolute inset-0 overflow-auto p-4 font-mono text-sm text-zinc-300 whitespace-pre-wrap z-10">
+                    <pre className="m-0 p-0 bg-transparent text-inherit">
+                      {displayedContent}
+                      <span className="inline-block w-2 h-4 bg-purple-500 animate-pulse ml-0.5 align-middle" />
+                    </pre>
                   </div>
-                ) : (
+                )}
+                
+                {/* Monaco Editor - show when not typing */}
+                {!isTyping && (
                   <div className="absolute inset-0">
                     <LazyMonacoEditor
-                      key={selectedFile} // Force remount on file change
+                      key={`${selectedFile}-${displayedContent.length > 0 ? 'ready' : 'waiting'}`}
                       value={displayedContent || selectedFileContent}
                       language={getMonacoLanguage(selectedFile!)}
                       readOnly={true}
                       className="h-full w-full"
-                      immediate={true} // Load immediately, no delay
+                      immediate={true}
                       onMount={(editor) => {
                         editorRef.current = editor;
-                        console.log('✅ Monaco editor mounted for file:', selectedFile);
                       }}
                     />
                   </div>
                 )}
+                
+                {/* Writing indicator badge */}
                 {isTyping && (
-                  <div className="absolute top-2 right-2 flex items-center gap-2 px-2 py-1 bg-purple-500/10 border border-purple-500/20 rounded text-xs text-purple-400">
+                  <div className="absolute top-2 right-2 flex items-center gap-2 px-2 py-1 bg-purple-500/10 border border-purple-500/20 rounded text-xs text-purple-400 z-20">
                     <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" />
                     <span>Writing code...</span>
                   </div>
@@ -389,4 +410,5 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
     </div>
   );
 };
+
 

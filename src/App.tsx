@@ -464,8 +464,8 @@ function App() {
             />
           }
           codeContent={
-            // Show loading state, code viewer, or error
-            isGenerating && !previewFiles && !currentDeploymentUrl ? (
+            // Show loading state while generating and no files yet
+            isGenerating && Object.keys(previewFiles || {}).length === 0 ? (
               <PreviewLoading
                 stage={buildStatus.stage}
                 filesGenerated={filesGenerated}
@@ -473,8 +473,10 @@ function App() {
                 message={buildStatus.message || 'Preparing preview...'}
                 progress={buildStatus.progress}
               />
-            ) : previewFiles && currentProjectId ? (
+            ) : previewFiles && Object.keys(previewFiles).length > 0 ? (
+              // Use stable key based on project name to prevent remounts
               <CodeViewer
+                key={`code-viewer-${currentProjectName || 'default'}`}
                 files={previewFiles}
                 projectName={currentProjectName || 'Generated App'}
                 deploymentUrl={currentDeploymentUrl}
