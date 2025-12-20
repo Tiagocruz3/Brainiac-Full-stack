@@ -184,6 +184,263 @@ These are the ONLY shadcn/ui components available in the template:
 5. **Mobile-friendly**: Responsive out of the box
 6. **Brainiac quality**: Every app looks premium
 
+# MODERN LAYOUT PATTERNS
+
+Create sophisticated, professional layouts using these proven patterns:
+
+## Hero Section Patterns
+
+### Pattern 1: Split Hero with Image
+\`\`\`jsx
+<section className="min-h-screen flex items-center bg-gradient-to-br from-zinc-950 via-purple-950/20 to-zinc-950">
+  <div className="container mx-auto px-6">
+    <div className="grid md:grid-cols-2 gap-12 items-center">
+      <div>
+        <div className="inline-block px-4 py-1.5 bg-purple-500/10 border border-purple-500/20 rounded-full text-purple-400 text-sm mb-6">
+          🚀 New: AI-Powered Features
+        </div>
+        <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">
+          Build Better Apps Faster
+        </h1>
+        <p className="text-xl text-zinc-400 mb-8 leading-relaxed">
+          The ultimate platform for modern development. Ship production-ready apps in minutes, not months.
+        </p>
+        <div className="flex gap-4">
+          <Button size="lg" className="bg-purple-600 hover:bg-purple-700">
+            Get Started Free <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+          <Button size="lg" variant="outline" className="border-zinc-700">
+            Watch Demo
+          </Button>
+        </div>
+        <div className="flex items-center gap-6 mt-8 text-sm text-zinc-500">
+          <div className="flex items-center gap-2">
+            <Check className="h-4 w-4 text-green-500" /> No credit card
+          </div>
+          <div className="flex items-center gap-2">
+            <Check className="h-4 w-4 text-green-500" /> Free forever
+          </div>
+        </div>
+      </div>
+      <div className="relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-pink-500/20 blur-3xl" />
+        <div className="relative bg-zinc-900/50 backdrop-blur border border-zinc-800 rounded-2xl p-8 shadow-2xl">
+          {/* Add dashboard preview, screenshot, or interactive demo */}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+\`\`\`
+
+### Pattern 2: Centered Hero with Background
+\`\`\`jsx
+<section className="min-h-screen flex items-center relative overflow-hidden">
+  {/* Animated background */}
+  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-900/20 via-zinc-950 to-zinc-950" />
+  <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+  
+  <div className="container mx-auto px-6 relative z-10">
+    <div className="max-w-4xl mx-auto text-center">
+      <h1 className="text-6xl md:text-8xl font-bold mb-6 bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent">
+        Your Product Name
+      </h1>
+      <p className="text-2xl text-zinc-400 mb-12 max-w-2xl mx-auto">
+        One line that explains the value. Clear, compelling, conversion-focused.
+      </p>
+      <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+        <Button size="lg" className="text-lg px-8 py-6 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+          Primary Action
+        </Button>
+        <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-2 border-zinc-700">
+          Secondary Action
+        </Button>
+      </div>
+      {/* Social proof */}
+      <div className="flex items-center justify-center gap-8 text-sm text-zinc-500">
+        <div><span className="text-white font-bold">10,000+</span> users</div>
+        <div><span className="text-white font-bold">4.9/5</span> rating</div>
+        <div><span className="text-white font-bold">99.9%</span> uptime</div>
+      </div>
+    </div>
+  </div>
+</section>
+\`\`\`
+
+## Feature Sections
+
+### Grid Layout (3 columns)
+\`\`\`jsx
+<section className="py-24 bg-zinc-950">
+  <div className="container mx-auto px-6">
+    <div className="text-center mb-16">
+      <h2 className="text-4xl md:text-5xl font-bold mb-4">Powerful Features</h2>
+      <p className="text-xl text-zinc-400 max-w-2xl mx-auto">
+        Everything you need to build, deploy, and scale your application.
+      </p>
+    </div>
+    
+    <div className="grid md:grid-cols-3 gap-8">
+      {[
+        { icon: '⚡', title: 'Lightning Fast', desc: 'Optimized for speed and performance' },
+        { icon: '🔒', title: 'Secure by Default', desc: 'Enterprise-grade security built-in' },
+        { icon: '📊', title: 'Real-time Analytics', desc: 'Track everything that matters' }
+      ].map((feature) => (
+        <Card key={feature.title} className="bg-zinc-900/50 border-zinc-800 hover:border-purple-500/50 transition-colors">
+          <CardContent className="p-8">
+            <div className="text-4xl mb-4">{feature.icon}</div>
+            <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
+            <p className="text-zinc-400">{feature.desc}</p>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  </div>
+</section>
+\`\`\`
+
+### Alternating Features (Image + Text)
+\`\`\`jsx
+<section className="py-24">
+  <div className="container mx-auto px-6">
+    {[
+      { title: 'Feature 1', desc: 'Description...', image: '🎨' },
+      { title: 'Feature 2', desc: 'Description...', image: '🚀' }
+    ].map((feature, idx) => (
+      <div key={feature.title} className={\`grid md:grid-cols-2 gap-16 items-center mb-32 \${idx % 2 === 1 ? 'md:grid-flow-col-dense' : ''}\`}>
+        <div className={idx % 2 === 1 ? 'md:col-start-2' : ''}>
+          <h3 className="text-4xl font-bold mb-4">{feature.title}</h3>
+          <p className="text-xl text-zinc-400 mb-6">{feature.desc}</p>
+          <Button>Learn More →</Button>
+        </div>
+        <div className={idx % 2 === 1 ? 'md:col-start-1 md:row-start-1' : ''}>
+          <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-2xl p-12 text-center text-8xl">
+            {feature.image}
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+</section>
+\`\`\`
+
+## Pricing Section
+
+\`\`\`jsx
+<section className="py-24 bg-gradient-to-b from-zinc-950 to-zinc-900">
+  <div className="container mx-auto px-6">
+    <div className="text-center mb-16">
+      <h2 className="text-4xl md:text-5xl font-bold mb-4">Simple Pricing</h2>
+      <p className="text-xl text-zinc-400">Choose the plan that fits your needs</p>
+    </div>
+    
+    <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+      {[
+        { name: 'Starter', price: '$0', features: ['Feature 1', 'Feature 2', 'Feature 3'], popular: false },
+        { name: 'Pro', price: '$29', features: ['Everything in Starter', 'Feature 4', 'Feature 5', 'Priority support'], popular: true },
+        { name: 'Enterprise', price: '$99', features: ['Everything in Pro', 'Feature 6', 'Feature 7', 'Dedicated support'], popular: false }
+      ].map((plan) => (
+        <Card key={plan.name} className={\`relative \${plan.popular ? 'border-purple-500 shadow-lg shadow-purple-500/20 scale-105' : 'border-zinc-800'} bg-zinc-900/50\`}>
+          {plan.popular && (
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full text-sm font-bold">
+              Most Popular
+            </div>
+          )}
+          <CardContent className="p-8">
+            <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
+            <div className="mb-6">
+              <span className="text-5xl font-bold">{plan.price}</span>
+              <span className="text-zinc-400">/month</span>
+            </div>
+            <ul className="space-y-3 mb-8">
+              {plan.features.map(feature => (
+                <li key={feature} className="flex items-start gap-3">
+                  <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <span className="text-zinc-300">{feature}</span>
+                </li>
+              ))}
+            </ul>
+            <Button className="w-full" variant={plan.popular ? 'default' : 'outline'}>
+              Get Started
+            </Button>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  </div>
+</section>
+\`\`\`
+
+## Testimonials Section
+
+\`\`\`jsx
+<section className="py-24">
+  <div className="container mx-auto px-6">
+    <h2 className="text-4xl md:text-5xl font-bold text-center mb-16">What People Say</h2>
+    
+    <div className="grid md:grid-cols-3 gap-8">
+      {[
+        { name: 'Sarah Johnson', role: 'CEO at TechCorp', quote: 'This product changed how we work. 10/10 would recommend.', avatar: '👩‍💼' },
+        { name: 'Mike Chen', role: 'Developer', quote: 'Best tool I\'ve used in years. Simply amazing.', avatar: '👨‍💻' },
+        { name: 'Emma Wilson', role: 'Designer', quote: 'Beautiful, fast, and powerful. Everything I needed.', avatar: '👩‍🎨' }
+      ].map((testimonial) => (
+        <Card key={testimonial.name} className="bg-zinc-900/50 border-zinc-800">
+          <CardContent className="p-6">
+            <p className="text-lg text-zinc-300 mb-6 italic">"{testimonial.quote}"</p>
+            <div className="flex items-center gap-4">
+              <div className="text-4xl">{testimonial.avatar}</div>
+              <div>
+                <div className="font-bold">{testimonial.name}</div>
+                <div className="text-sm text-zinc-500">{testimonial.role}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  </div>
+</section>
+\`\`\`
+
+## CTA Section
+
+\`\`\`jsx
+<section className="py-24 relative overflow-hidden">
+  <div className="absolute inset-0 bg-gradient-to-r from-purple-600/10 via-pink-600/10 to-purple-600/10" />
+  <div className="container mx-auto px-6 relative z-10">
+    <div className="max-w-3xl mx-auto text-center">
+      <h2 className="text-4xl md:text-6xl font-bold mb-6">
+        Ready to Get Started?
+      </h2>
+      <p className="text-xl text-zinc-400 mb-8">
+        Join thousands of teams already building with our platform.
+      </p>
+      <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <Button size="lg" className="text-lg px-8 py-6 bg-gradient-to-r from-purple-600 to-pink-600">
+          Start Free Trial
+        </Button>
+        <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-2">
+          Contact Sales
+        </Button>
+      </div>
+    </div>
+  </div>
+</section>
+\`\`\`
+
+## Design Best Practices
+
+1. **Spacing**: Use py-24 or py-32 for sections (generous whitespace)
+2. **Typography**: Large headings (text-4xl to text-7xl), good hierarchy
+3. **Colors**: Dark backgrounds (zinc-950/900), purple/pink accents
+4. **Gradients**: Use sparingly for emphasis (from-purple-600 to-pink-600)
+5. **Cards**: Always use hover states, subtle borders
+6. **Buttons**: Make primary actions obvious (larger, gradient)
+7. **Icons**: Use emojis or lucide-react icons (not obscure ones!)
+8. **Responsive**: Mobile-first (sm:, md:, lg: breakpoints)
+9. **Contrast**: White text on dark, zinc-400 for secondary text
+10. **Animations**: Use hover: transitions, no complex animations
+
 # WORKFLOW
 
 ## CRITICAL: Work FAST and EFFICIENTLY!
