@@ -195,8 +195,37 @@ async function createVercelProjectAlternative(
       const errorText = await projectResponse.text();
       console.warn('Vercel project creation had issues:', errorText);
       
-      // Even if it fails, return a "pending" result
-      // The project might still be accessible via Vercel dashboard
+      // Check if the project was created with a different name
+      // Try to find it by searching
+      try {
+        const searchResponse = await fetch(
+          `https://api.vercel.com/v9/projects${vercelKeys.teamId ? `?teamId=${vercelKeys.teamId}` : ''}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${vercelKeys.token}`,
+            },
+          }
+        );
+        if (searchResponse.ok) {
+          const data = await searchResponse.json();
+          const foundProject = data.projects?.find((p: any) => 
+            p.name.startsWith(input.name.toLowerCase().replace(/[^a-z0-9-]/g, '-'))
+          );
+          if (foundProject) {
+            console.log(`✅ Found existing project: ${foundProject.name}`);
+            return {
+              id: foundProject.id,
+              name: foundProject.name,
+              url: `${foundProject.name}.vercel.app`,
+            };
+          }
+        }
+      } catch (e) {
+        console.warn('Could not search for project:', e);
+      }
+      
+      // Last resort - return with warning
+      console.warn(`⚠️ Could not verify project URL - check Vercel dashboard`);
       return {
         id: 'pending',
         name: input.name,
@@ -206,13 +235,31 @@ async function createVercelProjectAlternative(
 
     const project = await projectResponse.json();
     const projectId = project.id;
-    // IMPORTANT: Use the ACTUAL project name Vercel assigned (may have suffix like -gules)
-    const actualProjectName = project.name;
-    console.log(`✅ Vercel project created: ${actualProjectName} (requested: ${input.name})`);
-
+    
     // Wait a moment for the project to be fully propagated in Vercel's systems
     console.log('⏳ Waiting for Vercel project to be ready...');
     await sleep(5000);
+    
+    // IMPORTANT: Re-fetch the project to get the ACTUAL name Vercel assigned
+    // (Vercel may add suffix like -gules during propagation)
+    let actualProjectName = project.name;
+    try {
+      const projectCheckResponse = await fetch(
+        `https://api.vercel.com/v9/projects/${projectId}${vercelKeys.teamId ? `?teamId=${vercelKeys.teamId}` : ''}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${vercelKeys.token}`,
+          },
+        }
+      );
+      if (projectCheckResponse.ok) {
+        const projectData = await projectCheckResponse.json();
+        actualProjectName = projectData.name;
+        console.log(`✅ Verified Vercel project name: ${actualProjectName} (requested: ${input.name})`);
+      }
+    } catch (e) {
+      console.log(`⚠️ Could not verify project name, using: ${actualProjectName}`);
+    }
 
     // Check if the project has Git connected before trying to trigger deployment
     const hasGitConnection = project.link && project.link.type === 'github';
@@ -253,9 +300,37 @@ async function createVercelProjectAlternative(
       url: projectUrl,
     };
   } catch (error) {
-    // Last resort: return the expected URL
-    // User can import manually if needed
+    // Last resort: try to find the project by name pattern
     console.warn('Vercel alternative method encountered an error:', error);
+    
+    try {
+      const searchResponse = await fetch(
+        `https://api.vercel.com/v9/projects${vercelKeys.teamId ? `?teamId=${vercelKeys.teamId}` : ''}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${vercelKeys.token}`,
+          },
+        }
+      );
+      if (searchResponse.ok) {
+        const data = await searchResponse.json();
+        const foundProject = data.projects?.find((p: any) => 
+          p.name.startsWith(input.name.toLowerCase().replace(/[^a-z0-9-]/g, '-'))
+        );
+        if (foundProject) {
+          console.log(`✅ Found project despite error: ${foundProject.name}`);
+          return {
+            id: foundProject.id,
+            name: foundProject.name,
+            url: `${foundProject.name}.vercel.app`,
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Could not search for project:', e);
+    }
+    
+    console.warn(`⚠️ Could not verify project URL - check Vercel dashboard`);
     return {
       id: 'manual-import-needed',
       name: input.name,
