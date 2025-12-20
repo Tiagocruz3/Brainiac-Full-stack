@@ -1,18 +1,40 @@
 /**
  * Pre-deployment Error Checker
  * 
- * Detects common TypeScript/React errors BEFORE deployment
- * and provides auto-fixes where possible.
+ * Comprehensive error detection system that catches common deployment issues
+ * BEFORE they reach production. Includes auto-fix capabilities where possible.
+ * 
+ * Categories:
+ * 1. TypeScript Compilation Errors
+ * 2. Environment Variable Errors
+ * 3. Package.json Errors
+ * 4. Build Configuration Errors
+ * 5. CSS/Tailwind Errors
+ * 6. React-Specific Errors
+ * 7. Supabase Integration Errors
+ * 8. Vercel Deployment Errors
+ * 9. Performance/Optimization Warnings
+ * 10. Security Issues
  */
+
+export type ErrorCategory = 
+  | 'typescript' | 'react' | 'tailwind' | 'import' | 'jsx' | 'env' 
+  | 'package' | 'config' | 'css' | 'supabase' | 'vercel' | 'performance' | 'security';
+
+export type ErrorSeverity = 'critical' | 'error' | 'warning' | 'info';
+
+export type ErrorAction = 'BLOCK_DEPLOYMENT' | 'WARN_USER' | 'AUTO_FIX' | 'SUGGEST';
 
 export interface ErrorPattern {
   id: string;
-  category: 'typescript' | 'react' | 'tailwind' | 'import' | 'jsx' | 'env' | 'package';
+  category: ErrorCategory;
   pattern: RegExp | null; // null for file-level checks
   description: string;
-  severity: 'error' | 'warning';
+  severity: ErrorSeverity;
   examples: string[];
   autoFix: ((code: string, match?: RegExpMatchArray) => string) | null;
+  recommendation?: string;
+  action?: ErrorAction;
 }
 
 export interface PackageJsonError {
@@ -20,7 +42,7 @@ export interface PackageJsonError {
   category: 'package';
   pattern: RegExp | null;
   description: string;
-  severity: 'error' | 'warning';
+  severity: ErrorSeverity;
   examples: string[];
   autoFix: ((packageJson: PackageJson, extra?: string) => PackageJson) | null;
 }
@@ -32,6 +54,7 @@ export interface PackageJson {
   scripts?: Record<string, string>;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
+  engines?: Record<string, string>;
   [key: string]: unknown;
 }
 
@@ -40,8 +63,10 @@ export interface DetectedError {
   line?: number;
   column?: number;
   message: string;
-  severity: 'error' | 'warning';
+  severity: ErrorSeverity;
   canAutoFix: boolean;
+  recommendation?: string;
+  action?: ErrorAction;
 }
 
 export interface BuildConfigError {
@@ -49,7 +74,7 @@ export interface BuildConfigError {
   category: 'config';
   pattern: RegExp | null;
   description: string;
-  severity: 'error' | 'warning';
+  severity: ErrorSeverity;
   examples: string[];
   requiredFile?: string; // File that must exist
   autoFix: ((files: Record<string, string>, content?: string) => Record<string, string>) | null;
@@ -931,16 +956,581 @@ interface ImportMeta {
 ];
 
 // =============================================================================
+// CATEGORY 7: CSS/TAILWIND ERRORS (Extended)
+// =============================================================================
+
+const cssErrors: ErrorPattern[] = [
+  {
+    id: 'missing-tailwind-directives',
+    category: 'css',
+    pattern: /The `@tailwind` directive is being used but Tailwind/i,
+    description: 'Missing @tailwind directives in CSS',
+    severity: 'error',
+    examples: [
+      '❌ CSS file without @tailwind directives',
+      '✅ @tailwind base; @tailwind components; @tailwind utilities;',
+    ],
+    autoFix: (code) => {
+      if (!code.includes('@tailwind')) {
+        return `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+${code}`;
+      }
+      return code;
+    }
+  },
+  {
+    id: 'css-not-imported',
+    category: 'css',
+    pattern: /Cannot find module.*index\.css/i,
+    description: 'index.css not imported in main.tsx',
+    severity: 'error',
+    examples: [
+      '❌ main.tsx without CSS import',
+      '✅ import "./index.css" in main.tsx',
+    ],
+    autoFix: (code) => {
+      if (!code.includes("import './index.css'") && !code.includes('import "./index.css"')) {
+        return `import './index.css'\n${code}`;
+      }
+      return code;
+    }
+  },
+  {
+    id: 'invalid-css-class',
+    category: 'css',
+    pattern: /Unknown at rule @apply/,
+    description: '@apply used with unknown Tailwind class',
+    severity: 'error',
+    examples: [
+      '❌ @apply unknown-class;',
+      '✅ @apply flex items-center;',
+    ],
+    autoFix: null
+  },
+  {
+    id: 'css-syntax-error',
+    category: 'css',
+    pattern: /CssSyntaxError|Unexpected token/,
+    description: 'CSS syntax error',
+    severity: 'error',
+    examples: [
+      '❌ .class { color: ; }',
+      '✅ .class { color: red; }',
+    ],
+    autoFix: null
+  },
+];
+
+// =============================================================================
+// CATEGORY 8: SUPABASE INTEGRATION ERRORS
+// =============================================================================
+
+const supabaseErrors: ErrorPattern[] = [
+  {
+    id: 'supabase-client-wrong-init',
+    category: 'supabase',
+    pattern: /createClient\(\s*['"]https:\/\/[a-z0-9]+\.supabase\.co['"]/,
+    description: 'Supabase client initialized with hardcoded URL',
+    severity: 'error',
+    examples: [
+      '❌ createClient("https://abc.supabase.co", "key")',
+      '✅ createClient(import.meta.env.VITE_SUPABASE_URL!, ...)',
+    ],
+    autoFix: (code) => {
+      return code.replace(
+        /createClient\(\s*['"]https:\/\/[a-z0-9]+\.supabase\.co['"]\s*,\s*['"][^'"]+['"]\s*\)/gi,
+        'createClient(import.meta.env.VITE_SUPABASE_URL!, import.meta.env.VITE_SUPABASE_ANON_KEY!)'
+      );
+    }
+  },
+  {
+    id: 'missing-await-supabase',
+    category: 'supabase',
+    pattern: /supabase\.from\([^)]+\)\.(select|insert|update|delete|upsert)\([^)]*\)(?!\s*\.then|\s*;|\s*\)|await)/,
+    description: 'Missing await on Supabase query',
+    severity: 'error',
+    examples: [
+      '❌ const data = supabase.from("users").select()',
+      '✅ const { data } = await supabase.from("users").select()',
+    ],
+    autoFix: null, // Complex - needs context awareness
+    recommendation: 'Add await before Supabase queries and destructure { data, error }'
+  },
+  {
+    id: 'supabase-no-error-handling',
+    category: 'supabase',
+    pattern: /await\s+supabase\.[^;]+;(?!\s*if\s*\(error)/,
+    description: 'No error handling for Supabase query',
+    severity: 'warning',
+    examples: [
+      '❌ const { data } = await supabase.from("x").select();',
+      '✅ const { data, error } = await supabase...; if (error) throw error;',
+    ],
+    autoFix: null,
+    recommendation: 'Always check for errors: if (error) { console.error(error); return; }'
+  },
+  {
+    id: 'wrong-table-name',
+    category: 'supabase',
+    pattern: /relation "([^"]+)" does not exist/,
+    description: 'Table name doesn\'t exist in database',
+    severity: 'error',
+    examples: [
+      '❌ .from("user") // Table is actually "users"',
+      '✅ .from("users")',
+    ],
+    autoFix: null // Requires knowing actual table names
+  },
+  {
+    id: 'supabase-rls-not-enabled',
+    category: 'supabase',
+    pattern: /Row Level Security.*disabled/i,
+    description: 'RLS not enabled on table',
+    severity: 'warning',
+    examples: [],
+    autoFix: null,
+    recommendation: 'Enable RLS: ALTER TABLE tablename ENABLE ROW LEVEL SECURITY;'
+  },
+];
+
+// =============================================================================
+// CATEGORY 9: VERCEL DEPLOYMENT ERRORS
+// =============================================================================
+
+const vercelErrors: ErrorPattern[] = [
+  {
+    id: 'vercel-build-failed',
+    category: 'vercel',
+    pattern: /Error: Command "npm run build" exited with (\d+)/,
+    description: 'Build command failed on Vercel',
+    severity: 'error',
+    examples: [
+      '❌ Build exit code 1 or 2',
+      '✅ Build completes successfully',
+    ],
+    autoFix: null,
+    recommendation: 'Run npm run build locally to see detailed errors'
+  },
+  {
+    id: 'vercel-missing-framework',
+    category: 'vercel',
+    pattern: /No framework detected/i,
+    description: 'Vercel could not detect framework',
+    severity: 'error',
+    examples: [],
+    autoFix: null,
+    recommendation: 'Add vercel.json with framework: "vite"'
+  },
+  {
+    id: 'vercel-output-not-found',
+    category: 'vercel',
+    pattern: /Error: No Output Directory named "dist"/i,
+    description: 'Output directory not found',
+    severity: 'error',
+    examples: [
+      '❌ outputDirectory: "build"',
+      '✅ outputDirectory: "dist"',
+    ],
+    autoFix: null,
+    recommendation: 'Ensure vite.config.ts has outDir: "dist"'
+  },
+  {
+    id: 'vercel-deployment-timeout',
+    category: 'vercel',
+    pattern: /Build exceeded maximum duration/i,
+    description: 'Build took too long',
+    severity: 'error',
+    examples: [],
+    autoFix: null,
+    recommendation: 'Optimize build or increase timeout in vercel.json'
+  },
+  {
+    id: 'vercel-serverless-error',
+    category: 'vercel',
+    pattern: /FUNCTION_INVOCATION_FAILED/i,
+    description: 'Serverless function crashed',
+    severity: 'error',
+    examples: [],
+    autoFix: null,
+    recommendation: 'Check API route for errors and add proper error handling'
+  },
+];
+
+// =============================================================================
+// CATEGORY 10: PERFORMANCE/OPTIMIZATION WARNINGS
+// =============================================================================
+
+const performanceErrors: ErrorPattern[] = [
+  {
+    id: 'large-bundle-size',
+    category: 'performance',
+    pattern: /Some chunks are larger than (\d+) kB/,
+    description: 'Bundle size exceeds recommended limit',
+    severity: 'warning',
+    examples: [
+      '❌ index.js 800kB',
+      '✅ Split into smaller chunks < 500kB',
+    ],
+    autoFix: null,
+    recommendation: 'Use dynamic import() for code splitting: const Heavy = lazy(() => import("./Heavy"))'
+  },
+  {
+    id: 'unoptimized-deps',
+    category: 'performance',
+    pattern: /Pre-bundling dependencies/,
+    description: 'Dependencies being pre-bundled',
+    severity: 'info',
+    examples: [],
+    autoFix: null,
+    recommendation: 'Add frequently used deps to vite.config.ts optimizeDeps.include'
+  },
+  {
+    id: 'memory-leak-interval',
+    category: 'performance',
+    pattern: /useEffect\([^)]*setInterval[^)]*\)(?![^}]*clearInterval)/,
+    description: 'setInterval without cleanup in useEffect',
+    severity: 'warning',
+    examples: [
+      '❌ useEffect(() => { setInterval(...) }, [])',
+      '✅ useEffect(() => { const id = setInterval(...); return () => clearInterval(id) }, [])',
+    ],
+    autoFix: null,
+    recommendation: 'Always return cleanup function from useEffect that uses setInterval'
+  },
+  {
+    id: 'memory-leak-timeout',
+    category: 'performance',
+    pattern: /useEffect\([^)]*setTimeout[^)]*\)(?![^}]*clearTimeout)/,
+    description: 'setTimeout without cleanup in useEffect',
+    severity: 'warning',
+    examples: [
+      '❌ useEffect(() => { setTimeout(...) }, [])',
+      '✅ useEffect(() => { const id = setTimeout(...); return () => clearTimeout(id) }, [])',
+    ],
+    autoFix: null,
+    recommendation: 'Return cleanup function: return () => clearTimeout(timeoutId)'
+  },
+  {
+    id: 'missing-memo',
+    category: 'performance',
+    pattern: null,
+    description: 'Expensive computation not memoized',
+    severity: 'info',
+    examples: [
+      '❌ const result = expensiveCalc(data) // Runs every render',
+      '✅ const result = useMemo(() => expensiveCalc(data), [data])',
+    ],
+    autoFix: null,
+    recommendation: 'Use useMemo for expensive calculations, useCallback for functions'
+  },
+  {
+    id: 'unnecessary-rerender',
+    category: 'performance',
+    pattern: /new (Object|Array|Function)\(\)/,
+    description: 'Creating new objects/arrays inline causes rerenders',
+    severity: 'warning',
+    examples: [
+      '❌ <Component style={{ color: "red" }} />',
+      '✅ const style = useMemo(() => ({ color: "red" }), [])',
+    ],
+    autoFix: null,
+    recommendation: 'Move object creation outside render or use useMemo'
+  },
+];
+
+// =============================================================================
+// CATEGORY 11: SECURITY ISSUES
+// =============================================================================
+
+const securityErrors: ErrorPattern[] = [
+  {
+    id: 'hardcoded-api-key-stripe',
+    category: 'security',
+    pattern: /['"]sk_live_[a-zA-Z0-9]{24,}['"]/,
+    description: 'Hardcoded Stripe secret key',
+    severity: 'critical',
+    examples: [
+      '❌ const key = "sk_live_abc123..."',
+      '✅ const key = import.meta.env.VITE_STRIPE_SECRET_KEY',
+    ],
+    autoFix: (code) => {
+      return code.replace(
+        /['"]sk_live_[a-zA-Z0-9]{24,}['"]/g,
+        'import.meta.env.VITE_STRIPE_SECRET_KEY'
+      );
+    },
+    action: 'BLOCK_DEPLOYMENT'
+  },
+  {
+    id: 'hardcoded-api-key-github',
+    category: 'security',
+    pattern: /['"]ghp_[a-zA-Z0-9]{36,}['"]/,
+    description: 'Hardcoded GitHub token',
+    severity: 'critical',
+    examples: [
+      '❌ const token = "ghp_abc123..."',
+      '✅ const token = import.meta.env.VITE_GITHUB_TOKEN',
+    ],
+    autoFix: (code) => {
+      return code.replace(
+        /['"]ghp_[a-zA-Z0-9]{36,}['"]/g,
+        'import.meta.env.VITE_GITHUB_TOKEN'
+      );
+    },
+    action: 'BLOCK_DEPLOYMENT'
+  },
+  {
+    id: 'hardcoded-aws-key',
+    category: 'security',
+    pattern: /['"]AKIA[A-Z0-9]{16}['"]/,
+    description: 'Hardcoded AWS access key',
+    severity: 'critical',
+    examples: [
+      '❌ const key = "AKIAIOSFODNN7EXAMPLE"',
+      '✅ const key = import.meta.env.VITE_AWS_ACCESS_KEY',
+    ],
+    autoFix: (code) => {
+      return code.replace(
+        /['"]AKIA[A-Z0-9]{16}['"]/g,
+        'import.meta.env.VITE_AWS_ACCESS_KEY'
+      );
+    },
+    action: 'BLOCK_DEPLOYMENT'
+  },
+  {
+    id: 'dangerously-set-html',
+    category: 'security',
+    pattern: /dangerouslySetInnerHTML\s*=\s*\{\s*\{\s*__html:/,
+    description: 'Using dangerouslySetInnerHTML (XSS risk)',
+    severity: 'warning',
+    examples: [
+      '❌ <div dangerouslySetInnerHTML={{ __html: userInput }} />',
+      '✅ Use DOMPurify: { __html: DOMPurify.sanitize(userInput) }',
+    ],
+    autoFix: null,
+    recommendation: 'Sanitize HTML with DOMPurify before using dangerouslySetInnerHTML'
+  },
+  {
+    id: 'eval-usage',
+    category: 'security',
+    pattern: /\beval\s*\(/,
+    description: 'Using eval() function (code injection risk)',
+    severity: 'critical',
+    examples: [
+      '❌ eval(userInput)',
+      '✅ Use JSON.parse() or safer alternatives',
+    ],
+    autoFix: null,
+    action: 'BLOCK_DEPLOYMENT',
+    recommendation: 'Never use eval(). Use JSON.parse(), Function constructor, or safer alternatives'
+  },
+  {
+    id: 'new-function-usage',
+    category: 'security',
+    pattern: /new\s+Function\s*\(/,
+    description: 'Using new Function() (similar to eval)',
+    severity: 'warning',
+    examples: [
+      '❌ new Function(userInput)()',
+      '✅ Use predefined functions or safer alternatives',
+    ],
+    autoFix: null,
+    recommendation: 'Avoid new Function() with user input'
+  },
+  {
+    id: 'http-not-https',
+    category: 'security',
+    pattern: /['"]http:\/\/(?!localhost|127\.0\.0\.1)/,
+    description: 'Using HTTP instead of HTTPS',
+    severity: 'warning',
+    examples: [
+      '❌ fetch("http://api.example.com")',
+      '✅ fetch("https://api.example.com")',
+    ],
+    autoFix: (code) => {
+      return code.replace(
+        /(['"])http:\/\/(?!localhost|127\.0\.0\.1)/g,
+        '$1https://'
+      );
+    }
+  },
+  {
+    id: 'exposed-password',
+    category: 'security',
+    pattern: /password\s*[:=]\s*['"][^'"]{4,}['"]/i,
+    description: 'Possible hardcoded password',
+    severity: 'critical',
+    examples: [
+      '❌ const password = "secret123"',
+      '✅ const password = import.meta.env.VITE_PASSWORD',
+    ],
+    autoFix: null,
+    action: 'WARN_USER'
+  },
+  {
+    id: 'sql-injection-risk',
+    category: 'security',
+    pattern: /`SELECT.*\$\{|`INSERT.*\$\{|`UPDATE.*\$\{|`DELETE.*\$\{/i,
+    description: 'Possible SQL injection vulnerability',
+    severity: 'critical',
+    examples: [
+      '❌ `SELECT * FROM users WHERE id = ${userId}`',
+      '✅ Use parameterized queries or Supabase client',
+    ],
+    autoFix: null,
+    action: 'WARN_USER',
+    recommendation: 'Use parameterized queries or ORM/query builder'
+  },
+];
+
+// =============================================================================
+// EXTENDED REACT ERRORS
+// =============================================================================
+
+const extendedReactErrors: ErrorPattern[] = [
+  {
+    id: 'missing-react-import',
+    category: 'react',
+    pattern: /'React' refers to a UMD global/,
+    description: 'Missing React import (pre-React 17 JSX transform)',
+    severity: 'error',
+    examples: [
+      '❌ function App() { return <div /> }',
+      '✅ import React from "react"; function App() {...}',
+    ],
+    autoFix: (code) => {
+      if (!code.includes('import React')) {
+        return `import React from 'react'\n${code}`;
+      }
+      return code;
+    }
+  },
+  {
+    id: 'hooks-conditional',
+    category: 'react',
+    pattern: /React Hook .* is called conditionally/,
+    description: 'Hooks called conditionally (violates Rules of Hooks)',
+    severity: 'error',
+    examples: [
+      '❌ if (x) { const [state] = useState() }',
+      '✅ const [state] = useState(); if (x) { ... }',
+    ],
+    autoFix: null,
+    recommendation: 'Move hooks to top level of component, before any conditions'
+  },
+  {
+    id: 'hooks-in-loop',
+    category: 'react',
+    pattern: /React Hook .* may be executed more than once/,
+    description: 'Hooks called inside loops',
+    severity: 'error',
+    examples: [
+      '❌ items.forEach(() => useState())',
+      '✅ const states = useState(items)',
+    ],
+    autoFix: null,
+    recommendation: 'Move hooks outside loops; use single state for arrays'
+  },
+  {
+    id: 'event-handler-called',
+    category: 'react',
+    pattern: /onClick=\{[a-zA-Z_][a-zA-Z0-9_]*\(\)\}/,
+    description: 'Event handler called instead of passed as reference',
+    severity: 'error',
+    examples: [
+      '❌ <button onClick={handleClick()}>',
+      '✅ <button onClick={handleClick}>',
+    ],
+    autoFix: (code) => {
+      return code.replace(
+        /onClick=\{([a-zA-Z_][a-zA-Z0-9_]*)\(\)\}/g,
+        'onClick={$1}'
+      );
+    }
+  },
+  {
+    id: 'state-direct-mutation',
+    category: 'react',
+    pattern: /\bstate\.(push|pop|shift|unshift|splice|sort|reverse)\(/,
+    description: 'Direct state mutation instead of setState',
+    severity: 'error',
+    examples: [
+      '❌ state.push(newItem)',
+      '✅ setState([...state, newItem])',
+    ],
+    autoFix: null,
+    recommendation: 'Never mutate state directly; always use setState with new reference'
+  },
+  {
+    id: 'use-state-object-mutation',
+    category: 'react',
+    pattern: /set[A-Z][a-zA-Z]*\(\s*\{[^}]*\.\.\./,
+    description: 'Possible state mutation when spreading',
+    severity: 'warning',
+    examples: [
+      '❌ setUser({ ...user, name: "new" }) // If user is mutated',
+      '✅ setUser(prev => ({ ...prev, name: "new" }))',
+    ],
+    autoFix: null,
+    recommendation: 'Use functional updates: setX(prev => ({ ...prev, changes }))'
+  },
+  {
+    id: 'useeffect-missing-deps',
+    category: 'react',
+    pattern: /React Hook useEffect has missing dependencies/,
+    description: 'useEffect missing dependencies',
+    severity: 'warning',
+    examples: [
+      '❌ useEffect(() => { doSomething(value) }, [])',
+      '✅ useEffect(() => { doSomething(value) }, [value])',
+    ],
+    autoFix: null,
+    recommendation: 'Add missing dependencies or use useCallback for functions'
+  },
+  {
+    id: 'async-useeffect',
+    category: 'react',
+    pattern: /useEffect\(\s*async/,
+    description: 'async function directly in useEffect',
+    severity: 'error',
+    examples: [
+      '❌ useEffect(async () => { await fetch() }, [])',
+      '✅ useEffect(() => { const load = async () => {...}; load() }, [])',
+    ],
+    autoFix: null,
+    recommendation: 'Define async function inside useEffect and call it immediately'
+  },
+];
+
+// =============================================================================
 // ALL ERROR PATTERNS
 // =============================================================================
 
 export const ALL_ERROR_PATTERNS: ErrorPattern[] = [
+  // Category 1: TypeScript
   ...typescriptSyntaxErrors,
   ...typescriptTypeErrors,
   ...importExportErrors,
-  ...reactErrors,
-  ...tailwindErrors,
+  // Category 2: Environment Variables
   ...envErrors,
+  // Category 3: React (original + extended)
+  ...reactErrors,
+  ...extendedReactErrors,
+  // Category 4: Tailwind
+  ...tailwindErrors,
+  // Category 5: CSS
+  ...cssErrors,
+  // Category 6: Supabase
+  ...supabaseErrors,
+  // Category 7: Vercel
+  ...vercelErrors,
+  // Category 8: Performance
+  ...performanceErrors,
+  // Category 9: Security
+  ...securityErrors,
 ];
 
 // =============================================================================
@@ -1386,23 +1976,52 @@ export function generateErrorKnowledgeBase(): string {
     'TypeScript Syntax': typescriptSyntaxErrors,
     'TypeScript Types': typescriptTypeErrors,
     'Imports/Exports': importExportErrors,
-    'React': reactErrors,
+    'React': [...reactErrors, ...extendedReactErrors],
     'Tailwind': tailwindErrors,
     'Environment Variables': envErrors,
+    'CSS': cssErrors,
+    'Supabase': supabaseErrors,
+    'Vercel': vercelErrors,
+    'Performance': performanceErrors,
+    'Security': securityErrors,
   };
   
   let summary = '# PRE-DEPLOYMENT ERROR CHECKLIST\n\n';
+  summary += '## Priority Levels\n';
+  summary += '- **CRITICAL**: Block deployment immediately\n';
+  summary += '- **ERROR**: Must fix before deploy\n';
+  summary += '- **WARNING**: Should fix, may cause issues\n';
+  summary += '- **INFO**: Nice to fix, optimization\n\n';
   
-  // Code errors
+  // Code errors by category
   for (const [category, patterns] of Object.entries(codeCategories)) {
     summary += `## ${category} Errors\n\n`;
-    for (const pattern of patterns) {
-      summary += `### ${pattern.id} (${pattern.severity})\n`;
+    
+    // Sort by severity: critical > error > warning > info
+    const severityOrder = { critical: 0, error: 1, warning: 2, info: 3 };
+    const sorted = [...patterns].sort((a, b) => 
+      severityOrder[a.severity] - severityOrder[b.severity]
+    );
+    
+    for (const pattern of sorted) {
+      const severityEmoji = {
+        critical: '🚨',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+      }[pattern.severity];
+      
+      summary += `### ${severityEmoji} ${pattern.id} (${pattern.severity})\n`;
       summary += `${pattern.description}\n`;
-      summary += `Examples:\n`;
-      pattern.examples.forEach(ex => {
-        summary += `- ${ex}\n`;
-      });
+      if (pattern.recommendation) {
+        summary += `💡 ${pattern.recommendation}\n`;
+      }
+      if (pattern.examples.length > 0) {
+        summary += `Examples:\n`;
+        pattern.examples.forEach(ex => {
+          summary += `- ${ex}\n`;
+        });
+      }
       summary += '\n';
     }
   }
@@ -1437,12 +2056,60 @@ export function generateErrorKnowledgeBase(): string {
   return summary;
 }
 
+/**
+ * Get critical errors that should block deployment
+ */
+export function getCriticalErrors(errors: DetectedError[]): DetectedError[] {
+  return errors.filter(e => e.severity === 'critical');
+}
+
+/**
+ * Check if deployment should be blocked
+ */
+export function shouldBlockDeployment(errors: DetectedError[]): boolean {
+  return errors.some(e => e.severity === 'critical' || e.action === 'BLOCK_DEPLOYMENT');
+}
+
+/**
+ * Get error statistics
+ */
+export function getErrorStats(errors: DetectedError[]): {
+  total: number;
+  critical: number;
+  error: number;
+  warning: number;
+  info: number;
+  autoFixable: number;
+} {
+  return {
+    total: errors.length,
+    critical: errors.filter(e => e.severity === 'critical').length,
+    error: errors.filter(e => e.severity === 'error').length,
+    warning: errors.filter(e => e.severity === 'warning').length,
+    info: errors.filter(e => e.severity === 'info').length,
+    autoFixable: errors.filter(e => e.canAutoFix).length,
+  };
+}
+
+// Export individual pattern arrays for specific checks
+export const CSS_ERROR_PATTERNS = cssErrors;
+export const SUPABASE_ERROR_PATTERNS = supabaseErrors;
+export const VERCEL_ERROR_PATTERNS = vercelErrors;
+export const PERFORMANCE_ERROR_PATTERNS = performanceErrors;
+export const SECURITY_ERROR_PATTERNS = securityErrors;
+export const EXTENDED_REACT_ERROR_PATTERNS = extendedReactErrors;
+
 // Export for use in agent
 export const ERROR_CHECKER = {
-  // Patterns
+  // All patterns
   patterns: ALL_ERROR_PATTERNS,
   packagePatterns: packageJsonErrors,
   buildConfigPatterns: buildConfigErrors,
+  cssPatterns: cssErrors,
+  supabasePatterns: supabaseErrors,
+  vercelPatterns: vercelErrors,
+  performancePatterns: performanceErrors,
+  securityPatterns: securityErrors,
   
   // Detection functions
   detectFromBuildOutput: detectErrorsFromBuildOutput,
@@ -1459,7 +2126,12 @@ export const ERROR_CHECKER = {
   autoFixPackage: autoFixPackageJson,
   autoFixBuildConfig: autoFixBuildConfig,
   
-  // Utilities
+  // Analysis utilities
+  getCriticalErrors: getCriticalErrors,
+  shouldBlockDeployment: shouldBlockDeployment,
+  getErrorStats: getErrorStats,
+  
+  // File utilities
   getRequiredFiles: getRequiredFiles,
   generateKnowledgeBase: generateErrorKnowledgeBase,
 };
