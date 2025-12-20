@@ -34,32 +34,50 @@ interface ErrorCheckResult {
 /**
  * Comprehensive pre-deployment error check
  * Runs all error checkers and auto-fixes what it can
+ * Now with progress callbacks for UI feedback
  */
-function runPreDeploymentChecks(
+async function runPreDeploymentChecks(
   files: FileSet,
-  packageJson?: PackageJson
-): ErrorCheckResult {
+  packageJson: PackageJson | undefined,
+  onProgress: ProgressCallback
+): Promise<ErrorCheckResult> {
   const allErrors: DetectedError[] = [];
   let fixedFiles = { ...files };
   let totalAutoFixed = 0;
+  const totalFiles = Object.keys(files).length;
+  let filesChecked = 0;
   
   console.log('🔍 Running pre-deployment error checks...');
   
+  // ========================================
+  // PHASE 1: Scanning Files (40-50%)
+  // ========================================
+  onProgress('error_check', '🔍 Scanning files for errors...', 40);
+  await sleep(200); // Small delay for animation
+  
   // 1. Check each file for code errors
   for (const [path, content] of Object.entries(files)) {
+    filesChecked++;
+    const scanProgress = 40 + ((filesChecked / totalFiles) * 5);
+    onProgress('error_check', `🔍 Scanning ${path}...`, Math.floor(scanProgress));
+    
     if (path.endsWith('.tsx') || path.endsWith('.ts') || path.endsWith('.jsx') || path.endsWith('.js')) {
       const fileErrors = ERROR_CHECKER.preCheck(content, path);
       
       if (fileErrors.length > 0) {
         console.log(`⚠️ Found ${fileErrors.length} issues in ${path}`);
+        onProgress('error_check', `⚠️ Found ${fileErrors.length} issues in ${path}`, Math.floor(scanProgress));
+        await sleep(100);
         
         // Try to auto-fix
         const { fixedCode, fixedCount, remainingErrors } = ERROR_CHECKER.autoFix(content, fileErrors);
         
         if (fixedCount > 0) {
           console.log(`✅ Auto-fixed ${fixedCount} issues in ${path}`);
+          onProgress('auto_fix', `✅ Auto-fixed ${fixedCount} issues in ${path}`, Math.floor(scanProgress));
           fixedFiles[path] = fixedCode;
           totalAutoFixed += fixedCount;
+          await sleep(100);
         }
         
         // Add remaining errors with file context
@@ -89,17 +107,26 @@ function runPreDeploymentChecks(
 
 ${content}`;
         totalAutoFixed++;
+        onProgress('auto_fix', `✅ Added @tailwind directives to ${path}`, Math.floor(scanProgress));
         console.log(`✅ Auto-added @tailwind directives to ${path}`);
+        await sleep(100);
       }
     }
   }
   
-  // 2. Check package.json if provided
+  // ========================================
+  // PHASE 2: Checking package.json (50-52%)
+  // ========================================
+  onProgress('error_check', '📦 Checking package.json...', 50);
+  await sleep(150);
+  
   if (packageJson) {
     const packageErrors = ERROR_CHECKER.preCheckPackage(packageJson);
     
     if (packageErrors.length > 0) {
       console.log(`⚠️ Found ${packageErrors.length} package.json issues`);
+      onProgress('error_check', `⚠️ Found ${packageErrors.length} package.json issues`, 51);
+      await sleep(100);
       
       const { fixedPackageJson, fixedCount, remainingErrors } = ERROR_CHECKER.autoFixPackage(
         packageJson,
@@ -108,8 +135,10 @@ ${content}`;
       
       if (fixedCount > 0) {
         console.log(`✅ Auto-fixed ${fixedCount} package.json issues`);
+        onProgress('auto_fix', `✅ Fixed ${fixedCount} package.json issues`, 51);
         fixedFiles['package.json'] = JSON.stringify(fixedPackageJson, null, 2);
         totalAutoFixed += fixedCount;
+        await sleep(100);
       }
       
       remainingErrors.forEach(err => {
@@ -121,11 +150,18 @@ ${content}`;
     }
   }
   
-  // 3. Check build configuration
+  // ========================================
+  // PHASE 3: Build Config Check (52-54%)
+  // ========================================
+  onProgress('error_check', '⚙️ Validating build configuration...', 52);
+  await sleep(150);
+  
   const configErrors = ERROR_CHECKER.preCheckBuildConfig(files);
   
   if (configErrors.length > 0) {
     console.log(`⚠️ Found ${configErrors.length} build config issues`);
+    onProgress('error_check', `⚠️ Found ${configErrors.length} config issues`, 53);
+    await sleep(100);
     
     const { fixedFiles: newFixedFiles, fixedCount, remainingErrors } = ERROR_CHECKER.autoFixBuildConfig(
       fixedFiles,
@@ -134,18 +170,28 @@ ${content}`;
     
     if (fixedCount > 0) {
       console.log(`✅ Auto-generated ${fixedCount} missing config files`);
+      onProgress('auto_fix', `✅ Generated ${fixedCount} missing config files`, 53);
       fixedFiles = newFixedFiles;
       totalAutoFixed += fixedCount;
+      await sleep(100);
     }
     
     allErrors.push(...remainingErrors);
   }
   
-  // 4. Check for security issues (critical)
+  // ========================================
+  // PHASE 4: Security Scan (54-58%)
+  // ========================================
+  onProgress('security_scan', '🔒 Running security scan...', 54);
+  await sleep(200);
+  
   const securityPatterns = ERROR_CHECKER.securityPatterns;
+  let securityIssues = 0;
+  
   for (const [path, content] of Object.entries(fixedFiles)) {
     for (const pattern of securityPatterns) {
       if (pattern.pattern && pattern.pattern.test(content)) {
+        securityIssues++;
         const severity = pattern.severity;
         allErrors.push({
           id: pattern.id,
@@ -155,22 +201,53 @@ ${content}`;
           action: pattern.action,
         });
         
+        if (severity === 'critical') {
+          onProgress('security_scan', `🚨 CRITICAL: ${pattern.description}`, 56);
+          await sleep(150);
+        }
+        
         // Try to auto-fix security issues
         if (pattern.autoFix) {
           const fixed = pattern.autoFix(content);
           if (fixed !== content) {
             fixedFiles[path] = fixed;
             totalAutoFixed++;
+            onProgress('auto_fix', `🔒 Fixed security issue: ${pattern.id}`, 57);
             console.log(`🔒 Auto-fixed security issue in ${path}: ${pattern.id}`);
+            await sleep(100);
           }
         }
       }
     }
   }
   
+  if (securityIssues === 0) {
+    onProgress('security_scan', '✅ No security issues found', 58);
+  } else {
+    onProgress('security_scan', `⚠️ Found ${securityIssues} security issues`, 58);
+  }
+  await sleep(100);
+  
   // Get final stats
   const stats = ERROR_CHECKER.getErrorStats(allErrors);
   const hasBlockingErrors = ERROR_CHECKER.shouldBlockDeployment(allErrors);
+  
+  // ========================================
+  // PHASE 5: Summary (58-60%)
+  // ========================================
+  if (hasBlockingErrors) {
+    onProgress('error_blocked', `🛑 ${stats.critical} critical errors found - deployment blocked`, 58);
+    console.log('\n🛑 DEPLOYMENT BLOCKED: Critical errors found!');
+  } else if (stats.total > 0) {
+    const summaryMsg = totalAutoFixed > 0 
+      ? `✅ Fixed ${totalAutoFixed} issues, ${stats.total - totalAutoFixed} remaining`
+      : `⚠️ ${stats.total} issues found (${stats.warning} warnings)`;
+    onProgress('error_check', summaryMsg, 59);
+  } else {
+    onProgress('error_check', '✅ All checks passed!', 59);
+  }
+  
+  await sleep(200);
   
   // Log summary
   console.log('\n📊 Pre-deployment check summary:');
@@ -180,10 +257,6 @@ ${content}`;
   if (stats.warning > 0) console.log(`   ⚠️ Warnings: ${stats.warning}`);
   if (stats.info > 0) console.log(`   ℹ️ Info: ${stats.info}`);
   console.log(`   ✅ Auto-fixed: ${totalAutoFixed}`);
-  
-  if (hasBlockingErrors) {
-    console.log('\n🛑 DEPLOYMENT BLOCKED: Critical errors found!');
-  }
   
   return {
     hasBlockingErrors,
@@ -565,7 +638,6 @@ Use create_app_from_template to avoid rate limits and build 10x faster!`;
               // =============================================================
               // 🔍 COMPREHENSIVE PRE-DEPLOYMENT ERROR CHECKING
               // =============================================================
-              onProgress('creating_repo', 'Running pre-deployment checks...', 58);
               
               // Parse package.json from template for validation
               let packageJson: PackageJson | undefined;
@@ -577,8 +649,8 @@ Use create_app_from_template to avoid rate limits and build 10x faster!`;
                 console.log('⚠️ Could not parse package.json');
               }
               
-              // Run comprehensive checks
-              const checkResult = runPreDeploymentChecks(previewFiles, packageJson);
+              // Run comprehensive checks with progress updates
+              const checkResult = await runPreDeploymentChecks(previewFiles, packageJson, onProgress);
               
               // Check for blocking errors
               if (checkResult.hasBlockingErrors) {
@@ -860,3 +932,4 @@ Use create_app_from_template to avoid rate limits and build 10x faster!`;
     };
   }
 }
+

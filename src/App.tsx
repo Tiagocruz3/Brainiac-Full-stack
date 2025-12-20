@@ -471,6 +471,7 @@ function App() {
                 filesGenerated={filesGenerated}
                 totalFiles={totalFiles}
                 message={buildStatus.message || 'Preparing preview...'}
+                progress={buildStatus.progress}
               />
             ) : previewFiles && currentProjectId ? (
               <CodeViewer
