@@ -206,6 +206,9 @@ async function createVercelProjectAlternative(
 
     const project = await projectResponse.json();
     const projectId = project.id;
+    // IMPORTANT: Use the ACTUAL project name Vercel assigned (may have suffix like -gules)
+    const actualProjectName = project.name;
+    console.log(`✅ Vercel project created: ${actualProjectName} (requested: ${input.name})`);
 
     // Wait a moment for the project to be fully propagated in Vercel's systems
     console.log('⏳ Waiting for Vercel project to be ready...');
@@ -227,12 +230,10 @@ async function createVercelProjectAlternative(
         // always points at an actual deployment instance.
         if (deploymentResult.url) {
           console.log('✅ Initial deployment triggered at:', deploymentResult.url);
-          // Override the default project URL below with the real deployment URL
-          const projectUrl = deploymentResult.url;
           return {
             id: projectId,
-            name: input.name,
-            url: projectUrl,
+            name: actualProjectName,
+            url: deploymentResult.url, // This will be the actual URL from triggerVercelDeployment
           };
         }
       } catch (deployError) {
@@ -243,13 +244,12 @@ async function createVercelProjectAlternative(
       console.log('⚠️ Project created but not connected to Git. You\'ll need to connect it manually in the Vercel dashboard to enable deployments.');
     }
     
-    // Fallback: return the default project alias. This might 404 until the
-    // first successful production deployment finishes.
-    const projectUrl = `${input.name}.vercel.app`;
+    // Fallback: return the actual project URL (may include Vercel suffix like -gules)
+    const projectUrl = `${actualProjectName}.vercel.app`;
     
     return {
       id: projectId,
-      name: input.name,
+      name: actualProjectName,
       url: projectUrl,
     };
   } catch (error) {

@@ -620,6 +620,12 @@ create_app_from_template({
 - ✅ **Automatic repo name handling** - conflicts resolved automatically
 - 🎨 **shadcn/ui included** - professional components ready to use
 
+**IMPORTANT: After creating app, update the page title!**
+Use \`update_github_file\` to change index.html title:
+\`\`\`html
+<title>Wrestling Fan Site</title>  <!-- NOT "Brainiac App" or "Todo App"! -->
+\`\`\`
+
 **Use this for:**
 - Landing pages ✅
 - Dashboards ✅
