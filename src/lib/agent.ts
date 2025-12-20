@@ -6,7 +6,192 @@ import { createVercelProject, addVercelEnvVar, triggerVercelDeployment } from '.
 import { SYSTEM_PROMPT } from './prompts/system';
 import { templates } from './templates';
 import { sleep } from './utils';
-import { ERROR_CHECKER } from './error-checker';
+import { 
+  ERROR_CHECKER, 
+  DetectedError, 
+  FileSet,
+  PackageJson 
+} from './error-checker';
+
+// =============================================================================
+// COMPREHENSIVE PRE-DEPLOYMENT ERROR CHECKING
+// =============================================================================
+
+interface ErrorCheckResult {
+  hasBlockingErrors: boolean;
+  errors: DetectedError[];
+  stats: {
+    total: number;
+    critical: number;
+    error: number;
+    warning: number;
+    info: number;
+    autoFixed: number;
+  };
+  fixedFiles: FileSet;
+}
+
+/**
+ * Comprehensive pre-deployment error check
+ * Runs all error checkers and auto-fixes what it can
+ */
+function runPreDeploymentChecks(
+  files: FileSet,
+  packageJson?: PackageJson
+): ErrorCheckResult {
+  const allErrors: DetectedError[] = [];
+  let fixedFiles = { ...files };
+  let totalAutoFixed = 0;
+  
+  console.log('🔍 Running pre-deployment error checks...');
+  
+  // 1. Check each file for code errors
+  for (const [path, content] of Object.entries(files)) {
+    if (path.endsWith('.tsx') || path.endsWith('.ts') || path.endsWith('.jsx') || path.endsWith('.js')) {
+      const fileErrors = ERROR_CHECKER.preCheck(content, path);
+      
+      if (fileErrors.length > 0) {
+        console.log(`⚠️ Found ${fileErrors.length} issues in ${path}`);
+        
+        // Try to auto-fix
+        const { fixedCode, fixedCount, remainingErrors } = ERROR_CHECKER.autoFix(content, fileErrors);
+        
+        if (fixedCount > 0) {
+          console.log(`✅ Auto-fixed ${fixedCount} issues in ${path}`);
+          fixedFiles[path] = fixedCode;
+          totalAutoFixed += fixedCount;
+        }
+        
+        // Add remaining errors with file context
+        remainingErrors.forEach(err => {
+          allErrors.push({
+            ...err,
+            message: `[${path}] ${err.message}`,
+          });
+        });
+      }
+    }
+    
+    // Check CSS files
+    if (path.endsWith('.css')) {
+      if (!content.includes('@tailwind') && path.includes('index.css')) {
+        allErrors.push({
+          id: 'missing-tailwind-directives',
+          message: `[${path}] Missing @tailwind directives`,
+          severity: 'error',
+          canAutoFix: true,
+        });
+        
+        // Auto-fix: add tailwind directives
+        fixedFiles[path] = `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+${content}`;
+        totalAutoFixed++;
+        console.log(`✅ Auto-added @tailwind directives to ${path}`);
+      }
+    }
+  }
+  
+  // 2. Check package.json if provided
+  if (packageJson) {
+    const packageErrors = ERROR_CHECKER.preCheckPackage(packageJson);
+    
+    if (packageErrors.length > 0) {
+      console.log(`⚠️ Found ${packageErrors.length} package.json issues`);
+      
+      const { fixedPackageJson, fixedCount, remainingErrors } = ERROR_CHECKER.autoFixPackage(
+        packageJson,
+        packageErrors
+      );
+      
+      if (fixedCount > 0) {
+        console.log(`✅ Auto-fixed ${fixedCount} package.json issues`);
+        fixedFiles['package.json'] = JSON.stringify(fixedPackageJson, null, 2);
+        totalAutoFixed += fixedCount;
+      }
+      
+      remainingErrors.forEach(err => {
+        allErrors.push({
+          ...err,
+          message: `[package.json] ${err.message}`,
+        });
+      });
+    }
+  }
+  
+  // 3. Check build configuration
+  const configErrors = ERROR_CHECKER.preCheckBuildConfig(files);
+  
+  if (configErrors.length > 0) {
+    console.log(`⚠️ Found ${configErrors.length} build config issues`);
+    
+    const { fixedFiles: newFixedFiles, fixedCount, remainingErrors } = ERROR_CHECKER.autoFixBuildConfig(
+      fixedFiles,
+      configErrors
+    );
+    
+    if (fixedCount > 0) {
+      console.log(`✅ Auto-generated ${fixedCount} missing config files`);
+      fixedFiles = newFixedFiles;
+      totalAutoFixed += fixedCount;
+    }
+    
+    allErrors.push(...remainingErrors);
+  }
+  
+  // 4. Check for security issues (critical)
+  const securityPatterns = ERROR_CHECKER.securityPatterns;
+  for (const [path, content] of Object.entries(fixedFiles)) {
+    for (const pattern of securityPatterns) {
+      if (pattern.pattern && pattern.pattern.test(content)) {
+        const severity = pattern.severity;
+        allErrors.push({
+          id: pattern.id,
+          message: `[${path}] ${pattern.description}`,
+          severity: severity,
+          canAutoFix: pattern.autoFix !== null,
+          action: pattern.action,
+        });
+        
+        // Try to auto-fix security issues
+        if (pattern.autoFix) {
+          const fixed = pattern.autoFix(content);
+          if (fixed !== content) {
+            fixedFiles[path] = fixed;
+            totalAutoFixed++;
+            console.log(`🔒 Auto-fixed security issue in ${path}: ${pattern.id}`);
+          }
+        }
+      }
+    }
+  }
+  
+  // Get final stats
+  const stats = ERROR_CHECKER.getErrorStats(allErrors);
+  const hasBlockingErrors = ERROR_CHECKER.shouldBlockDeployment(allErrors);
+  
+  // Log summary
+  console.log('\n📊 Pre-deployment check summary:');
+  console.log(`   Total issues: ${stats.total}`);
+  if (stats.critical > 0) console.log(`   🚨 Critical: ${stats.critical}`);
+  if (stats.error > 0) console.log(`   ❌ Errors: ${stats.error}`);
+  if (stats.warning > 0) console.log(`   ⚠️ Warnings: ${stats.warning}`);
+  if (stats.info > 0) console.log(`   ℹ️ Info: ${stats.info}`);
+  console.log(`   ✅ Auto-fixed: ${totalAutoFixed}`);
+  
+  if (hasBlockingErrors) {
+    console.log('\n🛑 DEPLOYMENT BLOCKED: Critical errors found!');
+  }
+  
+  return {
+    hasBlockingErrors,
+    errors: allErrors,
+    stats: { ...stats, autoFixed: totalAutoFixed },
+    fixedFiles,
+  };
+}
 
 export interface AgentResponse {
   success: boolean;
@@ -358,7 +543,7 @@ Use create_app_from_template to avoid rate limits and build 10x faster!`;
 
           switch (toolName) {
             case 'create_app_from_template':
-              onProgress('creating_repo', `Creating app from template: ${toolInput.template_id}...`, 60);
+              onProgress('creating_repo', `Creating app from template: ${toolInput.template_id}...`, 55);
               
               const template = templates.find(t => t.id === toolInput.template_id);
               if (!template) {
@@ -369,7 +554,7 @@ Use create_app_from_template to avoid rate limits and build 10x faster!`;
               console.log(`📦 Using template: ${template.name} with ${Object.keys(template.files).length} files`);
 
               // 🎬 Collect files for preview
-              const previewFiles: Record<string, string> = { ...template.files };
+              let previewFiles: Record<string, string> = { ...template.files };
 
               // If custom App.tsx provided, update preview files
               if (toolInput.customize_app) {
@@ -377,12 +562,54 @@ Use create_app_from_template to avoid rate limits and build 10x faster!`;
                 console.log('🎨 Custom App.tsx detected, updating preview...');
               }
 
-              // 🎬 Send files to preview IMMEDIATELY (before GitHub)
+              // =============================================================
+              // 🔍 COMPREHENSIVE PRE-DEPLOYMENT ERROR CHECKING
+              // =============================================================
+              onProgress('creating_repo', 'Running pre-deployment checks...', 58);
+              
+              // Parse package.json from template for validation
+              let packageJson: PackageJson | undefined;
+              try {
+                if (previewFiles['package.json']) {
+                  packageJson = JSON.parse(previewFiles['package.json']);
+                }
+              } catch {
+                console.log('⚠️ Could not parse package.json');
+              }
+              
+              // Run comprehensive checks
+              const checkResult = runPreDeploymentChecks(previewFiles, packageJson);
+              
+              // Check for blocking errors
+              if (checkResult.hasBlockingErrors) {
+                const criticalErrors = ERROR_CHECKER.getCriticalErrors(checkResult.errors);
+                console.error('🛑 CRITICAL ERRORS - Cannot deploy:', criticalErrors);
+                
+                result = {
+                  error: 'Deployment blocked due to critical errors',
+                  critical_errors: criticalErrors.map(e => e.message),
+                  stats: checkResult.stats,
+                  recommendation: 'Please fix these security/critical issues before deploying',
+                };
+                break;
+              }
+              
+              // Use fixed files (with auto-fixed issues)
+              previewFiles = checkResult.fixedFiles;
+              
+              // Log any remaining warnings
+              if (checkResult.stats.warning > 0 || checkResult.stats.error > 0) {
+                console.log(`⚠️ Proceeding with ${checkResult.stats.error} errors and ${checkResult.stats.warning} warnings`);
+              }
+              
+              // 🎬 Send (fixed) files to preview IMMEDIATELY (before GitHub)
               if (onFileUpdate) {
                 onFileUpdate(previewFiles);
-                console.log(`🎬 Sent ${Object.keys(previewFiles).length} files to preview`);
+                console.log(`🎬 Sent ${Object.keys(previewFiles).length} files to preview (after error fixes)`);
               }
 
+              onProgress('creating_repo', 'Creating GitHub repository...', 62);
+              
               // Create the GitHub repo
               const repo = await createGithubRepo(
                 {
@@ -396,17 +623,12 @@ Use create_app_from_template to avoid rate limits and build 10x faster!`;
               projectData.github = repo;
               console.log(`✅ Repo created: ${repo.name}`);
 
-              // Create ALL template files
-              const fileEntries = Object.entries(template.files);
+              // Create ALL template files (using potentially fixed files)
+              const fileEntries = Object.entries(previewFiles);
               let filesCreated = 0;
 
               for (const [path, content] of fileEntries) {
-                // Skip if this is the App.tsx and we have custom content
-                if (path === 'src/App.tsx' && toolInput.customize_app) {
-                  continue;
-                }
-
-                const fileProgress = 65 + ((filesCreated / fileEntries.length) * 10);
+                const fileProgress = 65 + ((filesCreated / fileEntries.length) * 12);
                 onProgress('creating_repo', `Creating ${path}...`, Math.floor(fileProgress));
 
                 await createGithubFile(
@@ -422,43 +644,6 @@ Use create_app_from_template to avoid rate limits and build 10x faster!`;
                 filesCreated++;
               }
 
-              // If custom App.tsx provided, check for errors then create it
-              if (toolInput.customize_app) {
-                onProgress('creating_repo', 'Checking App.tsx for errors...', 74);
-                
-                // 🔍 Pre-check for common errors BEFORE creating file
-                const preCheckErrors = ERROR_CHECKER.preCheck(toolInput.customize_app, 'src/App.tsx');
-                if (preCheckErrors.length > 0) {
-                  console.log('⚠️ Pre-check found potential issues:', preCheckErrors);
-                  
-                  // Try to auto-fix what we can
-                  const { fixedCode, fixedCount, remainingErrors } = ERROR_CHECKER.autoFix(
-                    toolInput.customize_app,
-                    preCheckErrors
-                  );
-                  
-                  if (fixedCount > 0) {
-                    console.log(`✅ Auto-fixed ${fixedCount} issues`);
-                    toolInput.customize_app = fixedCode;
-                  }
-                  
-                  if (remainingErrors.length > 0) {
-                    console.log('⚠️ Remaining issues that need manual review:', remainingErrors);
-                  }
-                }
-                
-                onProgress('creating_repo', 'Creating custom App.tsx...', 75);
-                await createGithubFile(
-                  {
-                    repo: repo.name,
-                    path: 'src/App.tsx',
-                    content: toolInput.customize_app,
-                    message: 'Add custom App.tsx',
-                  },
-                  apiKeys.github
-                );
-              }
-
               console.log(`✅ All ${filesCreated} files created successfully!`);
 
               result = {
@@ -467,6 +652,11 @@ Use create_app_from_template to avoid rate limits and build 10x faster!`;
                 repo_url: repo.html_url,
                 files_created: filesCreated,
                 template_used: template.name,
+                error_check: {
+                  issues_found: checkResult.stats.total,
+                  auto_fixed: checkResult.stats.autoFixed,
+                  warnings: checkResult.stats.warning,
+                },
               };
               break;
 
@@ -504,20 +694,71 @@ Use create_app_from_template to avoid rate limits and build 10x faster!`;
               break;
 
             case 'create_github_file':
-              const fileProgress = 65 + (toolUseBlocks.indexOf(toolUse) * 2);
-              onProgress('creating_repo', `Creating file: ${toolInput.path}...`, fileProgress);
+              const createFileProgress = 65 + (toolUseBlocks.indexOf(toolUse) * 2);
+              onProgress('creating_repo', `Creating file: ${toolInput.path}...`, createFileProgress);
+              
+              // 🔍 Pre-check file for errors before creating
+              if (toolInput.path.endsWith('.tsx') || toolInput.path.endsWith('.ts')) {
+                const fileErrors = ERROR_CHECKER.preCheck(toolInput.content, toolInput.path);
+                if (fileErrors.length > 0) {
+                  console.log(`⚠️ Pre-check found ${fileErrors.length} issues in ${toolInput.path}`);
+                  const { fixedCode, fixedCount } = ERROR_CHECKER.autoFix(toolInput.content, fileErrors);
+                  if (fixedCount > 0) {
+                    console.log(`✅ Auto-fixed ${fixedCount} issues in ${toolInput.path}`);
+                    toolInput.content = fixedCode;
+                  }
+                }
+              }
+              
               result = await createGithubFile(toolInput, apiKeys.github);
+              
+              // 🎬 Send file to preview
+              if (onFileUpdate && toolInput.content) {
+                const createPreviewFiles: Record<string, string> = {};
+                createPreviewFiles[toolInput.path] = toolInput.content;
+                onFileUpdate(createPreviewFiles);
+                console.log(`🎬 Sent ${toolInput.path} to preview (created)`);
+              }
               break;
 
             case 'update_github_file':
               onProgress('creating_repo', `Updating file: ${toolInput.path}...`, 68);
+              
+              // 🔍 Pre-check updated file for errors
+              if (toolInput.path.endsWith('.tsx') || toolInput.path.endsWith('.ts')) {
+                const updateFileErrors = ERROR_CHECKER.preCheck(toolInput.content, toolInput.path);
+                
+                // Check for critical security issues
+                const criticalSecurityErrors = updateFileErrors.filter(e => 
+                  e.severity === 'critical' && e.action === 'BLOCK_DEPLOYMENT'
+                );
+                
+                if (criticalSecurityErrors.length > 0) {
+                  console.error('🛑 CRITICAL SECURITY ISSUES - Blocking update:', criticalSecurityErrors);
+                  result = {
+                    error: 'Update blocked due to security issues',
+                    issues: criticalSecurityErrors.map(e => e.message),
+                  };
+                  break;
+                }
+                
+                if (updateFileErrors.length > 0) {
+                  console.log(`⚠️ Pre-check found ${updateFileErrors.length} issues in ${toolInput.path}`);
+                  const { fixedCode, fixedCount } = ERROR_CHECKER.autoFix(toolInput.content, updateFileErrors);
+                  if (fixedCount > 0) {
+                    console.log(`✅ Auto-fixed ${fixedCount} issues in ${toolInput.path}`);
+                    toolInput.content = fixedCode;
+                  }
+                }
+              }
+              
               result = await updateGithubFile(toolInput, apiKeys.github);
               
               // 🎬 Send updated file to preview immediately
               if (onFileUpdate && toolInput.content) {
-                const previewFiles: Record<string, string> = {};
-                previewFiles[toolInput.path] = toolInput.content;
-                onFileUpdate(previewFiles);
+                const updatePreviewFiles: Record<string, string> = {};
+                updatePreviewFiles[toolInput.path] = toolInput.content;
+                onFileUpdate(updatePreviewFiles);
                 console.log(`🎬 Sent ${toolInput.path} to preview (updated)`);
               }
               break;
