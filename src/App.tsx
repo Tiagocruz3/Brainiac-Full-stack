@@ -163,51 +163,19 @@ function App() {
         conversationHistory.length > 0 ? conversationHistory : undefined,
         controller.signal, // ← Pass abort signal!
         selectedModel, // ← Pass selected model!
-        // 🎬 File update callback for live preview with optimization!
-        (files) => {
-          // Validate file sizes
-          const validation = previewOptimization.validateFileSize(files);
-          if (!validation.valid) {
-            console.warn('⚠️ Some files exceed size limit:', validation.oversized);
-          }
-
-          // Calculate memory usage
-          const memoryUsage = previewOptimization.estimateMemoryUsage(files);
-          console.log(`💾 Preview memory estimate: ${(memoryUsage / 1024 / 1024).toFixed(2)}MB`);
-
-          // Debounce file updates to avoid excessive re-renders
-          previewOptimization.debounceFileUpdate(files, (debouncedFiles) => {
-            console.log('🎬 Received files for preview:', Object.keys(debouncedFiles));
-            
-            // IMPORTANT: MERGE new files with existing files (don't replace!)
-            // This ensures that when update_github_file sends 1 file, we don't lose all other files
-            setPreviewFiles(prevFiles => {
-              const mergedFiles = { ...prevFiles, ...debouncedFiles };
-              const fileCount = Object.keys(mergedFiles).length;
-              setFilesGenerated(fileCount);
-              
-              console.log(`🎬 Total files in preview: ${fileCount}`);
-              
-              // Only update preview manager if files actually changed
-              if (previewOptimization.shouldRebuild(mergedFiles)) {
-                // Create preview instance
-                previewManager.createPreview(
-                  projectId,
-                  currentProjectName || 'Generated App',
-                  mergedFiles
-                ).then(({ success, error }) => {
-                  if (!success && error) {
-                    setPreviewError(error);
-                  }
-                });
-              }
-              
-              if (fileCount >= totalFiles) {
-                addStepMessage('🎬 All files generated!');
-              }
-              
-              return mergedFiles;
-            });
+        // 🎬 File update callback for live preview - simplified to avoid re-render loops
+        (incomingFiles) => {
+          console.log('🎬 Received files for preview:', Object.keys(incomingFiles));
+          const incomingCount = Object.keys(incomingFiles).length;
+          
+          // Update file count immediately
+          setFilesGenerated(prev => Math.max(prev, incomingCount));
+          
+          // Merge files with existing - use functional update to get current state
+          setPreviewFiles(prevFiles => {
+            const mergedFiles = prevFiles ? { ...prevFiles, ...incomingFiles } : incomingFiles;
+            console.log(`🎬 Total files in preview: ${Object.keys(mergedFiles).length}`);
+            return mergedFiles;
           });
         }
       );
