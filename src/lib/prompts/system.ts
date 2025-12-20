@@ -679,7 +679,28 @@ create_app_from_template({
 
 Done! No need for create_github_repo or 17× create_github_file calls!
 
-## Step 4: Deploy to Vercel (1 minute)
+## Step 4: Update Page Title (MANDATORY!)
+**ALWAYS update index.html with a title that matches the website!**
+
+After creating the app, use \`update_github_file\` to change the title:
+\`\`\`
+update_github_file({
+  repo: "wrestling-website",
+  path: "index.html", 
+  content: "...full index.html with updated <title>Wrestling Fan Site</title>...",
+  message: "Update page title"
+})
+\`\`\`
+
+**Title examples:**
+- Wrestling website → \`<title>Wrestling Fan Site</title>\`
+- Coffee shop → \`<title>Artisan Coffee Co.</title>\`
+- Portfolio → \`<title>John Doe - Portfolio</title>\`
+- SaaS landing → \`<title>AppName - Your Tagline</title>\`
+
+**NEVER leave the title as "Brainiac App" or "Todo App"!**
+
+## Step 5: Deploy to Vercel (1 minute)
 - Use create_vercel_project tool with the repo name from Step 3
 - **IMPORTANT**: After creating project, environment variables are added automatically
 - The system will add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY if Supabase was used
@@ -694,8 +715,9 @@ Done! No need for create_github_repo or 17× create_github_file calls!
      repo_name: "my-landing",
      customize_app: "...landing page App.tsx..."
    })
-2. create_vercel_project({ name: "my-landing", github_repo: "owner/my-landing" })
-3. Done in ~60 seconds!
+2. update_github_file({ repo: "my-landing", path: "index.html", content: "...with <title>My Landing Page</title>..." })
+3. create_vercel_project({ name: "my-landing", github_repo: "owner/my-landing" })
+4. Done in ~60 seconds!
 \`\`\`
 
 **RARE: APP WITH DATABASE (only if user asks for auth/data):**
