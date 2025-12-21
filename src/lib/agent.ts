@@ -62,7 +62,37 @@ async function runPreDeploymentChecks(
     onProgress('error_check', `🔍 Scanning ${path}...`, Math.floor(scanProgress));
     
     if (path.endsWith('.tsx') || path.endsWith('.ts') || path.endsWith('.jsx') || path.endsWith('.js')) {
-      const fileErrors = ERROR_CHECKER.preCheck(content, path);
+      // First, check for and fix invalid characters (TS1127)
+      let currentContent = content;
+      const invalidCharPattern = /[\u200B\u200C\u200D\uFEFF\u00A0\u2018\u2019\u201C\u201D\u2013\u2014]/g;
+      if (invalidCharPattern.test(currentContent)) {
+        allErrors.push({
+          id: 'invalid-characters',
+          message: `[${path}] Contains invalid Unicode characters (TS1127)`,
+          severity: 'error',
+          canAutoFix: true,
+        });
+        
+        // Auto-fix: replace invalid characters
+        currentContent = currentContent
+          .replace(/\u200B/g, '')  // Zero-width space - remove
+          .replace(/\u200C/g, '')  // Zero-width non-joiner - remove
+          .replace(/\u200D/g, '')  // Zero-width joiner - remove
+          .replace(/\uFEFF/g, '')  // BOM - remove
+          .replace(/\u00A0/g, ' ') // Non-breaking space → regular space
+          .replace(/[\u2018\u2019]/g, "'") // Smart single quotes → straight
+          .replace(/[\u201C\u201D]/g, '"') // Smart double quotes → straight
+          .replace(/\u2013/g, '-') // En dash → hyphen
+          .replace(/\u2014/g, '-'); // Em dash → hyphen
+        
+        fixedFiles[path] = currentContent;
+        totalAutoFixed++;
+        onProgress('auto_fix', `✅ Fixed invalid characters in ${path}`, Math.floor(scanProgress));
+        console.log(`✅ Auto-fixed invalid characters in ${path}`);
+        await sleep(100);
+      }
+      
+      const fileErrors = ERROR_CHECKER.preCheck(currentContent, path);
       
       if (fileErrors.length > 0) {
         console.log(`⚠️ Found ${fileErrors.length} issues in ${path}`);
@@ -70,7 +100,7 @@ async function runPreDeploymentChecks(
         await sleep(100);
         
         // Try to auto-fix
-        const { fixedCode, fixedCount, remainingErrors } = ERROR_CHECKER.autoFix(content, fileErrors);
+        const { fixedCode, fixedCount, remainingErrors } = ERROR_CHECKER.autoFix(currentContent, fileErrors);
         
         if (fixedCount > 0) {
           console.log(`✅ Auto-fixed ${fixedCount} issues in ${path}`);

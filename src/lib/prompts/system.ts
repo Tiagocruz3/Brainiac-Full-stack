@@ -1038,6 +1038,26 @@ These issues have caused failed deployments before. Always avoid them:
    - **FIX**: NEVER include backslash-escaped quotes in HTML files. Use normal quotes only.
    - **CRITICAL**: The index.html file must have clean, unescaped quotes for all attributes
 
+8. **Invalid Character Error (TS1127)**
+   - **Error**: \`error TS1127: Invalid character.\`
+   - **Cause**: Invisible/special Unicode characters in the code that TypeScript can't parse
+   - **COMMON CULPRITS**:
+     - Zero-width spaces (\\u200B)
+     - Non-breaking spaces (\\u00A0) instead of regular spaces
+     - Smart/curly quotes (" " ' ') instead of straight quotes (" ')
+     - Em dashes (—) instead of regular dashes (-)
+     - Other invisible Unicode control characters
+   - **WRONG** (contains invisible characters):
+     \`\`\`tsx
+     const text = "Hello"; // May contain hidden zero-width space
+     \`\`\`
+   - **FIX**: 
+     - Use only ASCII characters in code
+     - Replace smart quotes with straight quotes: " → " and ' → '
+     - Replace em/en dashes with hyphens: — → - and – → -
+     - Remove zero-width spaces and other invisible characters
+   - **PREVENTION**: When copying code from web pages, PDFs, or Word docs, paste as plain text first
+
 # CODE STRUCTURE
 
 ## package.json
