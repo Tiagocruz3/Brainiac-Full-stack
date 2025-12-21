@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Settings as SettingsIcon, Menu, X } from 'lucide-react';
 import { Button } from './components/ui/Button';
 import { Settings } from './components/Settings';
@@ -44,6 +44,25 @@ function App() {
   const [totalFiles, setTotalFiles] = useState<number>(0);
   const [previewError, setPreviewError] = useState<PreviewErrorType | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Prevent late async updates from older runs (which can make the iframe show a "random" older site)
+  const activeRunIdRef = useRef<string>('');
+
+  const normalizeVercelPreviewUrl = (raw: unknown): string | null => {
+    if (typeof raw !== 'string') return null;
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+    const withProtocol =
+      trimmed.startsWith('http://') || trimmed.startsWith('https://') ? trimmed : `https://${trimmed}`;
+    try {
+      const u = new URL(withProtocol);
+      if (u.protocol !== 'https:') return null;
+      if (!u.hostname.endsWith('.vercel.app')) return null;
+      return u.toString();
+    } catch {
+      return null;
+    }
+  };
 
   // Performance optimization hooks
   const previewOptimization = usePreviewOptimization({
@@ -124,6 +143,7 @@ function App() {
     try {
       // Generate a new project ID for this build
       const projectId = `project-${Date.now()}`;
+      activeRunIdRef.current = projectId;
       setCurrentProjectId(projectId);
       setPreviewFiles(null); // Clear previous preview
       setPreviewError(null); // Clear previous errors
@@ -137,6 +157,8 @@ function App() {
         message,
         settings.apiKeys,
         (stage, msg, progress) => {
+          // Ignore stale progress from previous runs
+          if (activeRunIdRef.current !== projectId) return;
           // Only increase progress, never decrease
           setMaxProgress(prev => {
             const newProgress = Math.max(prev, progress);
@@ -165,6 +187,8 @@ function App() {
         selectedModel, // ← Pass selected model!
         // 🎬 File update callback for live preview - simplified to avoid re-render loops
         (incomingFiles) => {
+          // Ignore stale file updates from previous runs
+          if (activeRunIdRef.current !== projectId) return;
           console.log('🎬 Received files for preview:', Object.keys(incomingFiles));
           const incomingCount = Object.keys(incomingFiles).length;
           
@@ -179,6 +203,12 @@ function App() {
           });
         }
       );
+
+      // If user started a newer run while this one was in-flight, ignore this result
+      if (activeRunIdRef.current !== projectId) {
+        console.log('⚠️ Ignoring stale agent result for older run:', projectId);
+        return;
+      }
 
       // IMPORTANT: Reset UI state IMMEDIATELY
       console.log('✅ Build complete! Resetting UI state...');
@@ -213,8 +243,13 @@ function App() {
       // Update deployment URL if available with error handling
       if (result.data?.vercelUrl) {
         try {
-          setCurrentDeploymentUrl(result.data.vercelUrl);
-          console.log('✅ Deployment URL set:', result.data.vercelUrl);
+          const normalized = normalizeVercelPreviewUrl(result.data.vercelUrl);
+          if (!normalized) {
+            console.warn('⚠️ Ignoring invalid Vercel URL from agent:', result.data.vercelUrl);
+          } else {
+            setCurrentDeploymentUrl(normalized);
+            console.log('✅ Deployment URL set:', normalized);
+          }
         } catch (deployError) {
           console.error('❌ Failed to set deployment URL:', deployError);
           const error = previewErrorHandler.createError(deployError, 'deployment');
@@ -239,6 +274,8 @@ function App() {
         setProjectHistory(prev => [project, ...prev]);
       }
     } catch (error: any) {
+      // Clear active run so late callbacks can't mutate UI after failure
+      activeRunIdRef.current = '';
       // IMPORTANT: Reset UI state on error
       console.log('❌ Build error! Resetting UI state...');
       
@@ -279,6 +316,7 @@ function App() {
       console.log('⏹️ User clicked stop! Aborting build...');
       
       abortController.abort();
+      activeRunIdRef.current = '';
       
       // Immediately reset UI
       setIsGenerating(false);
@@ -307,10 +345,15 @@ function App() {
     
     // If we have the deployment URL, try reloading it
     if (currentDeploymentUrl) {
+      const normalized = normalizeVercelPreviewUrl(currentDeploymentUrl);
+      if (!normalized) {
+        console.warn('⚠️ Not retrying preview; currentDeploymentUrl is invalid:', currentDeploymentUrl);
+        return;
+      }
       // Force iframe reload by updating the key
       setCurrentDeploymentUrl('');
       setTimeout(() => {
-        setCurrentDeploymentUrl(currentDeploymentUrl);
+        setCurrentDeploymentUrl(normalized);
       }, 100);
     }
   };
