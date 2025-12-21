@@ -91,7 +91,7 @@ export const PreviewConsole: React.FC<PreviewConsoleProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 bg-zinc-900/50 border-b border-zinc-800">
         <div className="flex items-center gap-2">
-          <Terminal className="h-4 w-4 text-purple-500" />
+          <Terminal className="h-4 w-4 text-red-500" />
           <span className="text-sm font-semibold text-zinc-300">Console</span>
           {filteredMessages.length > 0 && (
             <span className="text-xs text-zinc-500">
@@ -131,7 +131,7 @@ export const PreviewConsole: React.FC<PreviewConsoleProps> = ({
                         }}
                         className={cn(
                           'w-full flex items-center justify-between px-2 py-1.5 rounded text-xs hover:bg-zinc-800 transition-colors',
-                          filter === type && 'bg-zinc-800 text-purple-400'
+                          filter === type && 'bg-zinc-800 text-red-400'
                         )}
                       >
                         <span className="capitalize">{type}</span>

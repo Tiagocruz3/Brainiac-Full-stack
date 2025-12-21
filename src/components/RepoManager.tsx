@@ -101,7 +101,7 @@ export const RepoManager: React.FC<RepoManagerProps> = ({ onClose }) => {
         <div className="p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50 backdrop-blur-xl">
           <div>
             <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-              <GitBranch className="h-6 w-6 text-purple-400" />
+              <GitBranch className="h-6 w-6 text-red-400" />
               GitHub Repository Manager
             </h2>
             <p className="text-sm text-zinc-400 mt-1">
@@ -131,7 +131,7 @@ export const RepoManager: React.FC<RepoManagerProps> = ({ onClose }) => {
             placeholder="Search repositories..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-2.5 bg-zinc-800/50 border border-zinc-700 rounded-lg focus:border-purple-500 focus:outline-none text-white placeholder-zinc-500 text-sm"
+            className="w-full px-4 py-2.5 bg-zinc-800/50 border border-zinc-700 rounded-lg focus:border-red-500 focus:outline-none text-white placeholder-zinc-500 text-sm"
           />
         </div>
 
@@ -163,7 +163,7 @@ export const RepoManager: React.FC<RepoManagerProps> = ({ onClose }) => {
               {filteredRepos.map((repo) => (
                 <div
                   key={repo.id}
-                  className="group bg-zinc-800/30 hover:bg-zinc-800/50 border border-zinc-700/50 hover:border-purple-500/30 rounded-xl p-4 transition-all duration-200"
+                  className="group bg-zinc-800/30 hover:bg-zinc-800/50 border border-zinc-700/50 hover:border-red-500/30 rounded-xl p-4 transition-all duration-200"
                 >
                   <div className="flex items-start justify-between gap-4">
                     {/* Repo Info */}
@@ -212,7 +212,7 @@ export const RepoManager: React.FC<RepoManagerProps> = ({ onClose }) => {
                         className="p-2 hover:bg-zinc-700/50 rounded-lg transition-colors"
                         title="View on GitHub"
                       >
-                        <ExternalLink className="h-4 w-4 text-zinc-400 hover:text-purple-400" />
+                        <ExternalLink className="h-4 w-4 text-zinc-400 hover:text-red-400" />
                       </a>
                       <button
                         onClick={() => handleDelete(repo)}

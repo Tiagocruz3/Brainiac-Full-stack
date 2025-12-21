@@ -438,7 +438,7 @@ function App() {
         <div className="p-4 border-b border-zinc-800/50">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center shadow-lg shadow-red-500/20">
                 <span className="text-white text-sm font-bold">B</span>
               </div>
               <div>

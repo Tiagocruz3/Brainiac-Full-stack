@@ -78,8 +78,8 @@ export const Settings: React.FC<SettingsProps> = ({ open, onClose, onSave }) => 
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center space-x-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-600/20">
-            <SettingsIcon className="h-6 w-6 text-purple-500" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-600/20">
+            <SettingsIcon className="h-6 w-6 text-red-500" />
           </div>
           <div>
             <h2 className="text-3xl font-bold">Settings</h2>

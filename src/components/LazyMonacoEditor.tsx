@@ -81,7 +81,7 @@ export const LazyMonacoEditor: React.FC<LazyMonacoEditorProps> = ({
   const LoadingFallback = () => (
     <div className={`flex items-center justify-center h-full bg-[#1e1e1e] ${className}`}>
       <div className="flex flex-col items-center gap-3">
-        <Loader2 className="h-8 w-8 text-purple-500 animate-spin" />
+        <Loader2 className="h-8 w-8 text-red-500 animate-spin" />
         <p className="text-sm text-zinc-400">Loading editor...</p>
       </div>
     </div>

@@ -599,7 +599,7 @@ const tailwindErrors: ErrorPattern[] = [
     severity: 'warning',
     examples: [
       '❌ className="text-primary-500"  // If not defined',
-      '✅ className="text-purple-500"',
+      '✅ className="text-red-500"',
     ],
     autoFix: null
   },

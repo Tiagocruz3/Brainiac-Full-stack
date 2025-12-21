@@ -147,7 +147,7 @@ export const SplitPane: React.FC<SplitPaneProps> = ({
               {activeTab === tab.id && (
                 <motion.div
                   layoutId="activeTab"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-red-500 to-pink-500"
                   transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                 />
               )}
@@ -216,7 +216,7 @@ export const SplitPane: React.FC<SplitPaneProps> = ({
                 className={cn(
                   'w-2 h-2 rounded-full transition-all',
                   activeTab === tab.id
-                    ? 'bg-purple-500 w-6'
+                    ? 'bg-red-500 w-6'
                     : 'bg-zinc-700'
                 )}
                 aria-label={`Switch to ${tab.label}`}

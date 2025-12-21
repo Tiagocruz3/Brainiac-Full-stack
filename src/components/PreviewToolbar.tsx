@@ -203,7 +203,7 @@ export const PreviewToolbar: React.FC<PreviewToolbarProps> = ({
                       }}
                       className={cn(
                         'w-full flex items-center gap-3 px-2 py-1.5 rounded text-sm hover:bg-zinc-800 transition-colors',
-                        currentDevice.id === device.id && 'bg-zinc-800 text-purple-400'
+                        currentDevice.id === device.id && 'bg-zinc-800 text-red-400'
                       )}
                     >
                       {getDeviceIcon(device.id)}

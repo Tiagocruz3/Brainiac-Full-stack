@@ -181,7 +181,7 @@ export function IncrementalFileExample() {
                       key={path}
                       className="p-3 bg-zinc-950/50 rounded border border-zinc-800 animate-in fade-in slide-in-from-left-2"
                     >
-                      <p className="text-xs font-mono text-purple-400 mb-1">
+                      <p className="text-xs font-mono text-red-400 mb-1">
                         {path}
                       </p>
                       <p className="text-xs text-zinc-500 truncate">
@@ -340,7 +340,7 @@ export function ManualControlExample() {
             {previewUrl && (
               <div className="mt-4 p-3 bg-zinc-950/50 rounded border border-zinc-800">
                 <p className="text-xs text-zinc-400 mb-1">Preview URL:</p>
-                <p className="text-sm font-mono text-purple-400">{previewUrl}</p>
+                <p className="text-sm font-mono text-red-400">{previewUrl}</p>
               </div>
             )}
           </CardContent>
@@ -490,7 +490,7 @@ export function AgentIntegrationFullExample() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-zinc-400 mb-1">Preview URL:</p>
-                  <p className="text-sm font-mono text-purple-400">{previewUrl}</p>
+                  <p className="text-sm font-mono text-red-400">{previewUrl}</p>
                 </div>
                 <Button
                   onClick={() => window.open(previewUrl, '_blank')}

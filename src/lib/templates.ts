@@ -344,7 +344,7 @@ function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="text-center">
-          <h1 className="text-4xl font-bold mb-8 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold mb-8 bg-gradient-to-r from-red-400 to-pink-400 bg-clip-text text-transparent">
             Todo App
           </h1>
           <Button onClick={signInWithGoogle} size="lg">
@@ -359,7 +359,7 @@ function App() {
     <div className="min-h-screen bg-black p-8">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-red-400 to-pink-400 bg-clip-text text-transparent">
             My Todos
           </h1>
           <Button onClick={signOut} variant="secondary" size="sm">
@@ -391,8 +391,8 @@ function App() {
                 onClick={() => toggleTodo(todo.id, todo.completed)}
                 className={\`h-6 w-6 rounded border-2 flex items-center justify-center transition \${
                   todo.completed
-                    ? 'bg-purple-600 border-purple-600'
-                    : 'border-zinc-600 hover:border-purple-500'
+                    ? 'bg-red-600 border-red-600'
+                    : 'border-zinc-600 hover:border-red-500'
                 }\`}
               >
                 {todo.completed && <Check className="h-4 w-4" />}

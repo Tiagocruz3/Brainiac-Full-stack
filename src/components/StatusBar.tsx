@@ -22,9 +22,9 @@ export const StatusBar: React.FC<StatusBarProps> = ({ status }) => {
       case 'auto_fix':
         return <Wrench className="h-5 w-5 text-yellow-500 animate-pulse" />;
       case 'self_heal':
-        return <Wrench className="h-5 w-5 text-fuchsia-500 animate-pulse" />;
+        return <Wrench className="h-5 w-5 text-red-500 animate-pulse" />;
       case 'security_scan':
-        return <Shield className="h-5 w-5 text-purple-500 animate-pulse" />;
+        return <Shield className="h-5 w-5 text-red-500 animate-pulse" />;
       case 'waiting':
         return <AlertTriangle className="h-5 w-5 text-orange-500 animate-pulse" />;
       case 'creating_supabase':
@@ -36,7 +36,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({ status }) => {
       case 'deploying':
         return <Rocket className="h-5 w-5 text-orange-500 animate-pulse" />;
       default:
-        return <Loader2 className="h-5 w-5 text-purple-500 animate-spin" />;
+        return <Loader2 className="h-5 w-5 text-red-500 animate-spin" />;
     }
   };
 
@@ -97,7 +97,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({ status }) => {
             <div className="flex items-center space-x-4">
               <div className="w-64 h-2 bg-zinc-800 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500 ease-out"
+                  className="h-full bg-gradient-to-r from-red-500 to-pink-500 transition-all duration-500 ease-out"
                   style={{ width: `${status.progress}%` }}
                 />
               </div>

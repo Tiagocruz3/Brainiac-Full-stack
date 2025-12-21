@@ -102,7 +102,7 @@ export const Preview: React.FC<PreviewProps> = ({
     return (
       <Card className={cn('flex items-center justify-center p-12', className)}>
         <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-purple-500 mx-auto" />
+          <Loader2 className="h-8 w-8 animate-spin text-red-500 mx-auto" />
           <div>
             <p className="text-sm font-medium">Starting preview server...</p>
             <p className="text-xs text-zinc-500 mt-1">This may take a few seconds</p>
@@ -180,7 +180,7 @@ export const Preview: React.FC<PreviewProps> = ({
       <div className="flex-1 relative bg-white">
         {!isLoaded && (
           <div className="absolute inset-0 flex items-center justify-center bg-zinc-950">
-            <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+            <Loader2 className="h-8 w-8 animate-spin text-red-500" />
           </div>
         )}
         <iframe

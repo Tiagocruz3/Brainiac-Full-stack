@@ -32,7 +32,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ onSelect, on
         <div className="p-6 border-b border-zinc-800 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-              <Zap className="h-6 w-6 text-purple-400" />
+              <Zap className="h-6 w-6 text-red-400" />
               Quick Start Templates
             </h2>
             <p className="text-sm text-zinc-400 mt-1">
@@ -53,7 +53,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ onSelect, on
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                   selectedCategory === cat.id
-                    ? 'bg-purple-600 text-white'
+                    ? 'bg-red-600 text-white'
                     : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white'
                 }`}
               >
@@ -70,14 +70,14 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ onSelect, on
             {filteredTemplates.map((template) => (
               <div
                 key={template.id}
-                className="bg-zinc-800/50 border border-zinc-700 hover:border-purple-500/50 rounded-xl p-4 cursor-pointer transition-all group"
+                className="bg-zinc-800/50 border border-zinc-700 hover:border-red-500/50 rounded-xl p-4 cursor-pointer transition-all group"
                 onClick={() => onSelect(template)}
               >
                 {/* Template Icon */}
                 <div className="text-4xl mb-3">{template.thumbnail}</div>
 
                 {/* Template Info */}
-                <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-purple-400 transition">
+                <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-red-400 transition">
                   {template.name}
                 </h3>
                 <p className="text-sm text-zinc-400 mb-4 line-clamp-2">
@@ -88,7 +88,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ onSelect, on
                 <div className="space-y-1.5 mb-4">
                   {template.features.slice(0, 3).map((feature, i) => (
                     <div key={i} className="flex items-center gap-2 text-xs text-zinc-500">
-                      <Check className="h-3 w-3 text-purple-400" />
+                      <Check className="h-3 w-3 text-red-400" />
                       <span>{feature}</span>
                     </div>
                   ))}
@@ -96,10 +96,10 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ onSelect, on
 
                 {/* Badge */}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs px-2 py-1 bg-purple-500/10 text-purple-400 rounded-full">
+                  <span className="text-xs px-2 py-1 bg-red-500/10 text-red-400 rounded-full">
                     {template.hasSupabase ? '+ Supabase' : 'Static'}
                   </span>
-                  <Zap className="h-4 w-4 text-purple-400 opacity-0 group-hover:opacity-100 transition" />
+                  <Zap className="h-4 w-4 text-red-400 opacity-0 group-hover:opacity-100 transition" />
                 </div>
               </div>
             ))}
@@ -117,7 +117,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ onSelect, on
         <div className="p-4 border-t border-zinc-800/50 bg-zinc-900/50">
           <div className="flex items-center justify-between text-sm">
             <p className="text-zinc-500">
-              <span className="text-purple-400 font-medium">{filteredTemplates.length}</span> templates available
+              <span className="text-red-400 font-medium">{filteredTemplates.length}</span> templates available
             </p>
             <button
               onClick={onClose}

@@ -413,16 +413,16 @@ const PreviewProgress: React.FC<PreviewProgressProps> = ({
     <div className="space-y-4">
       {/* Status Header */}
       <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-full bg-purple-500/10 flex items-center justify-center relative">
-          <div className="absolute inset-0 rounded-full bg-purple-500/20 animate-ping" />
+        <div className="h-10 w-10 rounded-full bg-red-500/10 flex items-center justify-center relative">
+          <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
           {status === 'initializing' && (
-            <Server className="h-5 w-5 text-purple-400 animate-pulse" />
+            <Server className="h-5 w-5 text-red-400 animate-pulse" />
           )}
           {status === 'writing-files' && (
-            <FileText className="h-5 w-5 text-purple-400" />
+            <FileText className="h-5 w-5 text-red-400" />
           )}
           {status === 'starting-server' && (
-            <Zap className="h-5 w-5 text-purple-400" />
+            <Zap className="h-5 w-5 text-red-400" />
           )}
         </div>
         <div className="flex-1">
@@ -435,7 +435,7 @@ const PreviewProgress: React.FC<PreviewProgressProps> = ({
             {progress.message}
           </p>
         </div>
-        <Badge variant="secondary" className="bg-purple-500/10 text-purple-400">
+        <Badge variant="secondary" className="bg-red-500/10 text-red-400">
           {progress.current}/{progress.total}
         </Badge>
       </div>
@@ -444,7 +444,7 @@ const PreviewProgress: React.FC<PreviewProgressProps> = ({
       <div className="space-y-2">
         <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300 ease-out relative"
+            className="h-full bg-gradient-to-r from-red-500 to-pink-500 transition-all duration-300 ease-out relative"
             style={{ width: `${progress.percentage}%` }}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
@@ -460,7 +460,7 @@ const PreviewProgress: React.FC<PreviewProgressProps> = ({
               </span>
             )}
           </span>
-          <span className="text-purple-400 font-medium">
+          <span className="text-red-400 font-medium">
             {progress.percentage}%
           </span>
         </div>
@@ -472,7 +472,7 @@ const PreviewProgress: React.FC<PreviewProgressProps> = ({
           <p className="text-xs font-medium text-zinc-400">Recent files:</p>
           <div className="text-xs text-zinc-500 font-mono bg-zinc-950/50 rounded p-2 max-h-20 overflow-y-auto">
             <div className="flex items-center gap-2">
-              <Loader2 className="h-3 w-3 animate-spin text-purple-400" />
+              <Loader2 className="h-3 w-3 animate-spin text-red-400" />
               <span>{progress.currentFile}</span>
             </div>
           </div>

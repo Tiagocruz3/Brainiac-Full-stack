@@ -229,7 +229,7 @@ export function LessonView() {
             {!isCompleted ? (
               <button
                 onClick={markComplete}
-                className="flex items-center gap-2 px-6 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 transition font-medium"
+                className="flex items-center gap-2 px-6 py-2 rounded-lg bg-red-600 hover:bg-red-700 transition font-medium"
               >
                 <Award className="h-4 w-4" />
                 Complete & Continue
@@ -238,7 +238,7 @@ export function LessonView() {
               <button
                 onClick={goToNext}
                 disabled={currentIndex === lessons.length - 1}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
                 Next
                 <ChevronRight className="h-4 w-4" />
@@ -282,7 +282,7 @@ export function LessonPlayer({ lesson }) {
 
       case 'text':
         return (
-          <div className="prose prose-invert prose-purple max-w-none">
+          <div className="prose prose-invert prose-red max-w-none">
             <div dangerouslySetInnerHTML={{ __html: lesson.content }} />
           </div>
         )
@@ -358,15 +358,15 @@ export function LessonPlayer({ lesson }) {
 
         {/* Key Takeaways */}
         {lesson.key_takeaways && (
-          <div className="mt-12 p-6 bg-purple-500/10 border border-purple-500/20 rounded-xl">
+          <div className="mt-12 p-6 bg-red-500/10 border border-red-500/20 rounded-xl">
             <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-purple-400" />
+              <CheckCircle className="h-5 w-5 text-red-400" />
               Key Takeaways
             </h3>
             <ul className="space-y-2">
               {lesson.key_takeaways.map((takeaway, i) => (
                 <li key={i} className="text-zinc-300 flex items-start gap-2">
-                  <span className="text-purple-400 mt-1">•</span>
+                  <span className="text-red-400 mt-1">•</span>
                   <span>{takeaway}</span>
                 </li>
               ))}
@@ -462,7 +462,7 @@ export function QuizModal({ lesson, onComplete, onClose }) {
             )}
             <button
               onClick={onComplete}
-              className="flex-1 px-4 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition"
+              className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 rounded-lg transition"
             >
               Continue
             </button>
@@ -500,7 +500,7 @@ export function QuizModal({ lesson, onComplete, onClose }) {
         {/* Progress */}
         <div className="h-1 bg-zinc-800">
           <div
-            className="h-full bg-purple-500 transition-all duration-300"
+            className="h-full bg-red-500 transition-all duration-300"
             style={{ width: \`\${((currentQuestion + 1) / questions.length) * 100}%\` }}
           />
         </div>
@@ -518,14 +518,14 @@ export function QuizModal({ lesson, onComplete, onClose }) {
                 onClick={() => handleAnswer(currentQuestion, i)}
                 className={\`w-full p-4 text-left rounded-xl border-2 transition \${
                   answers[currentQuestion] === i
-                    ? 'border-purple-500 bg-purple-500/10'
+                    ? 'border-red-500 bg-red-500/10'
                     : 'border-zinc-800 hover:border-zinc-700 bg-zinc-800/50'
                 }\`}
               >
                 <div className="flex items-center gap-3">
                   <div className={\`h-6 w-6 rounded-full border-2 flex items-center justify-center \${
                     answers[currentQuestion] === i
-                      ? 'border-purple-500 bg-purple-500'
+                      ? 'border-red-500 bg-red-500'
                       : 'border-zinc-600'
                   }\`}>
                     {answers[currentQuestion] === i && (
@@ -553,7 +553,7 @@ export function QuizModal({ lesson, onComplete, onClose }) {
             <button
               onClick={submitQuiz}
               disabled={answers.length !== questions.length}
-              className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition font-medium"
+              className="px-6 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition font-medium"
             >
               Submit Quiz
             </button>
@@ -561,7 +561,7 @@ export function QuizModal({ lesson, onComplete, onClose }) {
             <button
               onClick={() => setCurrentQuestion(currentQuestion + 1)}
               disabled={answers[currentQuestion] === undefined}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition"
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition"
             >
               Next
             </button>

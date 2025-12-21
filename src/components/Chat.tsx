@@ -100,9 +100,9 @@ export const Chat: React.FC<ChatProps> = ({
   const ThinkingIndicator = () => (
     <div className="flex items-center gap-2">
       <div className="flex items-center gap-1">
-        <span className="inline-block w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
-        <span className="inline-block w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '200ms' }} />
-        <span className="inline-block w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '400ms' }} />
+        <span className="inline-block w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
+        <span className="inline-block w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '200ms' }} />
+        <span className="inline-block w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '400ms' }} />
       </div>
       <span className="text-xs text-zinc-400">
         {buildStatus?.stage === 'idle' ? 'Thinking...' : 'Planning...'}
@@ -117,7 +117,7 @@ export const Chat: React.FC<ChatProps> = ({
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-6 py-12">
             <div className="flex items-center gap-3 mb-4">
-              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/25">
+              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center shadow-lg shadow-red-500/25">
                 <Sparkles className="h-6 w-6 text-white" />
               </div>
             </div>
@@ -154,7 +154,7 @@ export const Chat: React.FC<ChatProps> = ({
                   className={cn(
                     'max-w-[85%] rounded-2xl px-4 py-3',
                     message.role === 'user'
-                      ? 'bg-purple-600 text-white'
+                      ? 'bg-red-600 text-white'
                       : message.content.startsWith('⚡')
                       ? 'bg-zinc-900/50 border border-zinc-800 text-zinc-400 text-xs px-3 py-2'
                       : 'bg-zinc-900 text-zinc-100'
@@ -180,7 +180,7 @@ export const Chat: React.FC<ChatProps> = ({
               <div className="flex justify-start animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
                 <div className="bg-zinc-900 rounded-2xl px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-purple-400 animate-pulse" />
+                    <Sparkles className="h-4 w-4 text-red-400 animate-pulse" />
                     <ThinkingIndicator />
                   </div>
                 </div>
@@ -197,18 +197,18 @@ export const Chat: React.FC<ChatProps> = ({
                         <Check className="h-4 w-4 text-green-500" />
                       </div>
                     ) : (
-                      <div className="h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center relative">
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-purple-500 border-t-transparent" />
+                      <div className="h-8 w-8 rounded-full bg-red-500/10 flex items-center justify-center relative">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-500 border-t-transparent" />
                       </div>
                     )}
                     <div className="flex-1">
                       <p className="text-sm font-medium text-white">{buildStatus.message}</p>
                     </div>
-                    <span className="text-sm text-purple-400 font-mono">{buildStatus.progress}%</span>
+                    <span className="text-sm text-red-400 font-mono">{buildStatus.progress}%</span>
                   </div>
                   <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
+                      className="h-full bg-gradient-to-r from-red-500 to-pink-500 transition-all duration-500"
                       style={{ width: `${buildStatus.progress}%` }}
                     />
                   </div>
@@ -289,7 +289,7 @@ export const Chat: React.FC<ChatProps> = ({
                           className={cn(
                             "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left",
                             selectedModel === model.id 
-                              ? "bg-purple-500/10 text-white" 
+                              ? "bg-red-500/10 text-white" 
                               : "hover:bg-zinc-800 text-zinc-400 hover:text-white"
                           )}
                         >
@@ -300,7 +300,7 @@ export const Chat: React.FC<ChatProps> = ({
                               <span className={cn(
                                 "text-[10px] px-1.5 py-0.5 rounded-full",
                                 selectedModel === model.id 
-                                  ? "bg-purple-500/20 text-purple-300" 
+                                  ? "bg-red-500/20 text-red-300" 
                                   : "bg-zinc-800 text-zinc-500"
                               )}>
                                 {model.badge}
@@ -308,7 +308,7 @@ export const Chat: React.FC<ChatProps> = ({
                             </div>
                           </div>
                           {selectedModel === model.id && (
-                            <Check className="h-4 w-4 text-purple-400 flex-shrink-0" />
+                            <Check className="h-4 w-4 text-red-400 flex-shrink-0" />
                           )}
                         </button>
                       ))}

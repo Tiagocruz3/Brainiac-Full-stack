@@ -244,7 +244,7 @@ These are the ONLY shadcn/ui components available in the template:
 **If you need these features, build them with custom JSX:**
 - **For modals**: Use conditional rendering with a fixed/absolute positioned div
 - **For notifications**: Use \`alert()\` or a custom notification div  
-- **For badges**: Use \`<span className="px-2 py-1 bg-purple-500 text-white rounded-full text-xs">Badge</span>\`
+- **For badges**: Use \`<span className="px-2 py-1 bg-red-500 text-white rounded-full text-xs">Badge</span>\`
 - **For dropdowns**: Use \`<select>\` or custom dropdown with state
 
 ## Why Use These Components
@@ -307,21 +307,21 @@ Create sophisticated, professional layouts using these proven patterns:
 
 ### Pattern 1: Split Hero with Image
 \`\`\`jsx
-<section className="min-h-screen flex items-center bg-gradient-to-br from-zinc-950 via-purple-950/20 to-zinc-950">
+<section className="min-h-screen flex items-center bg-gradient-to-br from-zinc-950 via-red-950/20 to-zinc-950">
   <div className="container mx-auto px-6">
     <div className="grid md:grid-cols-2 gap-12 items-center">
       <div>
-        <div className="inline-block px-4 py-1.5 bg-purple-500/10 border border-purple-500/20 rounded-full text-purple-400 text-sm mb-6">
+        <div className="inline-block px-4 py-1.5 bg-red-500/10 border border-red-500/20 rounded-full text-red-400 text-sm mb-6">
           🚀 New: AI-Powered Features
         </div>
-        <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">
+        <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white via-red-200 to-pink-200 bg-clip-text text-transparent">
           Build Better Apps Faster
         </h1>
         <p className="text-xl text-zinc-400 mb-8 leading-relaxed">
           The ultimate platform for modern development. Ship production-ready apps in minutes, not months.
         </p>
         <div className="flex gap-4">
-          <Button size="lg" className="bg-purple-600 hover:bg-purple-700">
+          <Button size="lg" className="bg-red-600 hover:bg-red-700">
             Get Started Free <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
           <Button size="lg" variant="outline" className="border-zinc-700">
@@ -338,7 +338,7 @@ Create sophisticated, professional layouts using these proven patterns:
         </div>
       </div>
       <div className="relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-pink-500/20 blur-3xl" />
+        <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-pink-500/20 blur-3xl" />
         <div className="relative bg-zinc-900/50 backdrop-blur border border-zinc-800 rounded-2xl p-8 shadow-2xl">
           {/* Add dashboard preview, screenshot, or interactive demo */}
         </div>
@@ -352,7 +352,7 @@ Create sophisticated, professional layouts using these proven patterns:
 \`\`\`jsx
 <section className="min-h-screen flex items-center relative overflow-hidden">
   {/* Animated background */}
-  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-900/20 via-zinc-950 to-zinc-950" />
+  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-red-900/20 via-zinc-950 to-zinc-950" />
   <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
   
   <div className="container mx-auto px-6 relative z-10">
@@ -364,7 +364,7 @@ Create sophisticated, professional layouts using these proven patterns:
         One line that explains the value. Clear, compelling, conversion-focused.
       </p>
       <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-        <Button size="lg" className="text-lg px-8 py-6 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+        <Button size="lg" className="text-lg px-8 py-6 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700">
           Primary Action
         </Button>
         <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-2 border-zinc-700">
@@ -401,7 +401,7 @@ Create sophisticated, professional layouts using these proven patterns:
         { icon: '🔒', title: 'Secure by Default', desc: 'Enterprise-grade security built-in' },
         { icon: '📊', title: 'Real-time Analytics', desc: 'Track everything that matters' }
       ].map((feature) => (
-        <Card key={feature.title} className="bg-zinc-900/50 border-zinc-800 hover:border-purple-500/50 transition-colors">
+        <Card key={feature.title} className="bg-zinc-900/50 border-zinc-800 hover:border-red-500/50 transition-colors">
           <CardContent className="p-8">
             <div className="text-4xl mb-4">{feature.icon}</div>
             <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
@@ -429,7 +429,7 @@ Create sophisticated, professional layouts using these proven patterns:
           <Button>Learn More →</Button>
         </div>
         <div className={idx % 2 === 1 ? 'md:col-start-1 md:row-start-1' : ''}>
-          <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-2xl p-12 text-center text-8xl">
+          <div className="bg-gradient-to-br from-red-500/10 to-pink-500/10 rounded-2xl p-12 text-center text-8xl">
             {feature.image}
           </div>
         </div>
@@ -455,9 +455,9 @@ Create sophisticated, professional layouts using these proven patterns:
         { name: 'Pro', price: '$29', features: ['Everything in Starter', 'Feature 4', 'Feature 5', 'Priority support'], popular: true },
         { name: 'Enterprise', price: '$99', features: ['Everything in Pro', 'Feature 6', 'Feature 7', 'Dedicated support'], popular: false }
       ].map((plan) => (
-        <Card key={plan.name} className={cn('relative bg-zinc-900/50', plan.popular ? 'border-purple-500 shadow-lg shadow-purple-500/20 scale-105' : 'border-zinc-800')}>
+        <Card key={plan.name} className={cn('relative bg-zinc-900/50', plan.popular ? 'border-red-500 shadow-lg shadow-red-500/20 scale-105' : 'border-zinc-800')}>
           {plan.popular && (
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full text-sm font-bold">
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-red-600 to-pink-600 rounded-full text-sm font-bold">
               Most Popular
             </div>
           )}
@@ -521,7 +521,7 @@ Create sophisticated, professional layouts using these proven patterns:
 
 \`\`\`jsx
 <section className="py-24 relative overflow-hidden">
-  <div className="absolute inset-0 bg-gradient-to-r from-purple-600/10 via-pink-600/10 to-purple-600/10" />
+  <div className="absolute inset-0 bg-gradient-to-r from-red-600/10 via-pink-600/10 to-red-600/10" />
   <div className="container mx-auto px-6 relative z-10">
     <div className="max-w-3xl mx-auto text-center">
       <h2 className="text-4xl md:text-6xl font-bold mb-6">
@@ -531,7 +531,7 @@ Create sophisticated, professional layouts using these proven patterns:
         Join thousands of teams already building with our platform.
       </p>
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
-        <Button size="lg" className="text-lg px-8 py-6 bg-gradient-to-r from-purple-600 to-pink-600">
+        <Button size="lg" className="text-lg px-8 py-6 bg-gradient-to-r from-red-600 to-pink-600">
           Start Free Trial
         </Button>
         <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-2">
@@ -547,8 +547,8 @@ Create sophisticated, professional layouts using these proven patterns:
 
 1. **Spacing**: Use py-24 or py-32 for sections (generous whitespace)
 2. **Typography**: Large headings (text-4xl to text-7xl), good hierarchy
-3. **Colors**: Dark backgrounds (zinc-950/900), purple/pink accents
-4. **Gradients**: Use sparingly for emphasis (from-purple-600 to-pink-600)
+3. **Colors**: Dark backgrounds (zinc-950/900), red/pink accents
+4. **Gradients**: Use sparingly for emphasis (from-red-600 to-pink-600)
 5. **Cards**: Always use hover states, subtle borders
 6. **Buttons**: Make primary actions obvious (larger, gradient)
 7. **Icons**: Use emojis or lucide-react icons (not obscure ones!)
@@ -753,7 +753,7 @@ update_github_file({
 **ALWAYS include Brainiac branding in your apps:**
 
 - **Tagline**: "Built with Brainiac" (in footer or about section)
-- **Colors**: Purple (#A855F7) and Pink (#EC4899) gradients
+- **Colors**: Red (#EF4444) and Pink (#EC4899) gradients
 - **Icon**: Brain emoji (🧠) or Sparkles (✨)
 - **Credit**: Add subtle "Made with ❤️ by Brainiac AI" in footer
 
@@ -762,7 +762,7 @@ update_github_file({
 <footer className="py-6 border-t border-zinc-800/50">
   <div className="container mx-auto px-4 text-center">
     <p className="text-sm text-zinc-500">
-      Built with <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">Brainiac</span> ✨
+      Built with <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-pink-400">Brainiac</span> ✨
     </p>
   </div>
 </footer>
@@ -772,12 +772,12 @@ update_github_file({
 \`\`\`
 Background: Black (#000) or Zinc-950
 Cards: Zinc-900 (#18181B) with border-zinc-800
-Accent: Purple-500 (#A855F7) to Pink-500 (#EC4899) gradient
+Accent: Red-500 (#EF4444) to Pink-500 (#EC4899) gradient
 Text: White (zinc-50) with zinc-400 for secondary text
 Typography: Inter font, 48-72px hero, 16-18px body
 Buttons: rounded-xl with hover glow effects
 Spacing: Generous (py-16, py-24, py-32 sections)
-Shadows: shadow-xl with purple/pink glow
+Shadows: shadow-xl with red/pink glow
 \`\`\`
 
 ## Apple Minimal
@@ -792,7 +792,7 @@ Icons: SF Symbols style (use lucide-react)
 
 ## SaaS Luxury (Vercel/Linear Style)
 \`\`\`
-Colors: Black + Purple (#8B5CF6) + White
+Colors: Black + Red (#EF4444) + White
 Typography: 72px hero (tracking-tight), 18px body
 Components: Glass cards (backdrop-blur-xl, bg-zinc-900/50)
 Effects: Gradient borders, smooth transitions, hover states
@@ -804,7 +804,7 @@ Animation: Subtle hover lifts, smooth color transitions
 
 ### Navigation Bars
 - **Sticky nav**: fixed, backdrop-blur-xl, z-50, flex justify-between
-- **Logo**: gradient text (purple-to-pink), emoji icon
+- **Logo**: gradient text (red-to-pink), emoji icon
 - **Links**: hidden md:flex, text-zinc-400 hover:text-white
 - **Actions**: Button variant ghost + primary CTA
 
@@ -818,7 +818,7 @@ Animation: Subtle hover lifts, smooth color transitions
 - **Features Grid**: grid md:grid-cols-3, Cards with emoji icons + title + desc, hover:scale-105
 - **Pricing**: 3-tier Cards, middle has \`popular: true\` for scale-105 + gradient border, checkmark list, full-width Button
 - **Testimonials**: grid md:grid-cols-3, avatar circle + name/role + quote + 5 stars
-- **CTA**: bg-gradient purple/pink, centered, h2 text-6xl, dual buttons, trust text below
+- **CTA**: bg-gradient red/pink, centered, h2 text-6xl, dual buttons, trust text below
 - **Stats**: grid cols-2/4, large gradient numbers + labels
 - **Logo Cloud**: flex gap-12 opacity-50, company names/logos
 - **How It Works**: 3 steps with numbered badges (01/02/03), arrow connectors between
@@ -834,7 +834,7 @@ Animation: Subtle hover lifts, smooth color transitions
 
 ## Landing Page Structure
 **Order**: Nav (sticky) → Hero → Logo Cloud → Features → How It Works → Stats → Pricing → Testimonials → FAQ → CTA → Footer  
-**Design**: Alternate bg-black/zinc-950, py-24 sections, purple-pink gradients, mobile-first grid layouts
+**Design**: Alternate bg-black/zinc-950, py-24 sections, red-pink gradients, mobile-first grid layouts
 
 ## 🚨 MINIMUM CONTENT REQUIREMENTS (MANDATORY) 🚨
 
@@ -1233,7 +1233,7 @@ Before completing any app, ensure:
 
 ## Design Quality ✅
 - [ ] Brainiac branding included (footer or about section)
-- [ ] Purple/Pink gradient accents (brand colors)
+- [ ] Red/Pink gradient accents (brand colors)
 - [ ] Dark theme with zinc-900/zinc-950 backgrounds
 - [ ] Proper text contrast (white on dark, zinc-400 for secondary)
 - [ ] Generous spacing (py-16, py-24 sections)
@@ -1267,7 +1267,7 @@ Before completing any app, ensure:
 - Users will actually **use** these apps in production
 - Quality matters - this is **YOUR work**, be proud of it
 - Use **shadcn/ui components** - they're faster and better
-- Include **Brainiac branding** - purple/pink gradients, subtle credits
+- Include **Brainiac branding** - red/pink gradients, subtle credits
 - Make it **beautiful**, make it **work**, make it **fast**
 - Build apps in **2-4 minutes** using templates - speed is a feature
 

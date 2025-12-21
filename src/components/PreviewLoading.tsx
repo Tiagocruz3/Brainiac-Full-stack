@@ -38,8 +38,8 @@ const stageConfig: Record<string, { icon: React.ReactNode; color: string; bgColo
   },
   security_scan: { 
     icon: <Shield className="w-4 h-4" />, 
-    color: 'text-purple-400', 
-    bgColor: 'bg-purple-500/10 border-purple-500/20',
+    color: 'text-red-400', 
+    bgColor: 'bg-red-500/10 border-red-500/20',
     label: 'Security Scan' 
   },
   error_blocked: { 
@@ -68,8 +68,8 @@ const stageConfig: Record<string, { icon: React.ReactNode; color: string; bgColo
   },
   self_heal: {
     icon: <Wrench className="w-4 h-4" />,
-    color: 'text-fuchsia-400',
-    bgColor: 'bg-fuchsia-500/10 border-fuchsia-500/20',
+    color: 'text-red-400',
+    bgColor: 'bg-red-500/10 border-red-500/20',
     label: 'Self-Healing',
   },
   creating_supabase: { 
@@ -99,7 +99,7 @@ export const PreviewLoading: React.FC<PreviewLoadingProps> = ({
             className={`w-3 h-3 rounded-full ${
               stage === 'error_blocked' ? 'bg-red-500' :
               stage === 'auto_fix' ? 'bg-yellow-500' :
-              stage === 'security_scan' ? 'bg-purple-500' :
+              stage === 'security_scan' ? 'bg-red-500' :
               'bg-blue-500/80'
             }`}
             animate={{ opacity: [0.5, 1, 0.5] }}
@@ -132,7 +132,7 @@ export const PreviewLoading: React.FC<PreviewLoadingProps> = ({
             <motion.div
               className={`h-full ${
                 stage === 'error_blocked' ? 'bg-red-500' :
-                stage === 'security_scan' ? 'bg-gradient-to-r from-purple-500 to-pink-500' :
+                stage === 'security_scan' ? 'bg-gradient-to-r from-red-500 to-pink-500' :
                 stage === 'auto_fix' ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
                 'bg-gradient-to-r from-blue-500 to-cyan-500'
               }`}

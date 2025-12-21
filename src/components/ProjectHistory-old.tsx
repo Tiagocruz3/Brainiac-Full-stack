@@ -61,7 +61,7 @@ export const ProjectHistory: React.FC<ProjectHistoryProps> = ({ projects, onClea
         {projects.map((project) => (
           <div
             key={project.id}
-            className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 hover:border-purple-500/30 transition-all"
+            className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 hover:border-red-500/30 transition-all"
           >
             <div className="flex items-start justify-between mb-2">
               <div className="flex-1">

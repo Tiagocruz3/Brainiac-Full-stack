@@ -146,7 +146,7 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
           key={node.path}
           className={cn(
             'flex items-center gap-1.5 px-1.5 py-0.5 cursor-pointer hover:bg-zinc-800/50 rounded transition-colors',
-            isSelected && 'bg-zinc-800/70 text-purple-400'
+            isSelected && 'bg-zinc-800/70 text-red-400'
           )}
           style={{ paddingLeft: `${depth * 10 + 4}px` }}
           onClick={() => setSelectedFile(node.path)}
@@ -171,7 +171,7 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
           onClick={() => toggleFolder(node.path)}
         >
           {isExpanded ? (
-            <FolderOpen className="h-3 w-3 text-purple-400" />
+            <FolderOpen className="h-3 w-3 text-red-400" />
           ) : (
             <Folder className="h-3 w-3 text-zinc-500" />
           )}
@@ -336,7 +336,7 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
         {/* Compact Code Display */}
         <div className="col-span-4 flex flex-col overflow-hidden">
           <div className="flex items-center justify-between px-3 py-1 bg-zinc-900/30 border-b border-zinc-800">
-            <span className="text-[11px] font-mono text-purple-400 truncate">
+            <span className="text-[11px] font-mono text-red-400 truncate">
               {selectedFile || 'No file selected'}
             </span>
             {selectedFileContent && (
@@ -366,7 +366,7 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
                   <div className="absolute inset-0 overflow-auto p-4 font-mono text-sm text-zinc-300 whitespace-pre-wrap z-10">
                     <pre className="m-0 p-0 bg-transparent text-inherit">
                       {displayedContent}
-                      <span className="inline-block w-2 h-4 bg-purple-500 animate-pulse ml-0.5 align-middle" />
+                      <span className="inline-block w-2 h-4 bg-red-500 animate-pulse ml-0.5 align-middle" />
                     </pre>
                   </div>
                 )}
@@ -390,8 +390,8 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
                 
                 {/* Writing indicator badge */}
                 {isTyping && (
-                  <div className="absolute top-2 right-2 flex items-center gap-2 px-2 py-1 bg-purple-500/10 border border-purple-500/20 rounded text-xs text-purple-400 z-20">
-                    <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" />
+                  <div className="absolute top-2 right-2 flex items-center gap-2 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded text-xs text-red-400 z-20">
+                    <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
                     <span>Writing code...</span>
                   </div>
                 )}

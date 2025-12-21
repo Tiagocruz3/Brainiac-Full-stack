@@ -49,7 +49,7 @@ export const PreviewNetwork: React.FC<PreviewNetworkProps> = ({
       case 'DELETE':
         return 'text-red-400';
       case 'PATCH':
-        return 'text-purple-400';
+        return 'text-red-400';
       default:
         return 'text-zinc-400';
     }
@@ -89,7 +89,7 @@ export const PreviewNetwork: React.FC<PreviewNetworkProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 bg-zinc-900/50 border-b border-zinc-800">
           <div className="flex items-center gap-2">
-            <Network className="h-4 w-4 text-purple-500" />
+            <Network className="h-4 w-4 text-red-500" />
             <span className="text-sm font-semibold text-zinc-300">Network</span>
             {requests.length > 0 && (
               <span className="text-xs text-zinc-500">

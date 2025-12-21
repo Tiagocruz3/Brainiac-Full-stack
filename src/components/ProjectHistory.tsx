@@ -40,7 +40,7 @@ export const ProjectHistory: React.FC<ProjectHistoryProps> = ({ projects, onClea
       <div className="p-4 border-b border-zinc-800/50">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center space-x-2">
-            <History className="h-4 w-4 text-purple-400" />
+            <History className="h-4 w-4 text-red-400" />
             <h2 className="text-sm font-semibold text-white">Recent Projects</h2>
           </div>
           <span className="text-xs text-zinc-500">{projects.length}</span>
@@ -51,7 +51,7 @@ export const ProjectHistory: React.FC<ProjectHistoryProps> = ({ projects, onClea
           variant="ghost"
           size="sm"
           onClick={onOpenRepoManager}
-          className="w-full text-xs text-zinc-400 hover:text-purple-400 h-8 mb-2"
+          className="w-full text-xs text-zinc-400 hover:text-red-400 h-8 mb-2"
         >
           <GitBranch className="h-3 w-3 mr-1" />
           Manage Repositories
@@ -82,7 +82,7 @@ export const ProjectHistory: React.FC<ProjectHistoryProps> = ({ projects, onClea
           projects.map((project) => (
             <div
               key={project.id}
-              className="group relative bg-zinc-900/40 hover:bg-zinc-900/60 border border-zinc-800/50 hover:border-purple-500/30 rounded-lg p-3 transition-all duration-200 cursor-pointer"
+              className="group relative bg-zinc-900/40 hover:bg-zinc-900/60 border border-zinc-800/50 hover:border-red-500/30 rounded-lg p-3 transition-all duration-200 cursor-pointer"
             >
               {/* Status Badge */}
               <div className="absolute top-2 right-2">
@@ -111,7 +111,7 @@ export const ProjectHistory: React.FC<ProjectHistoryProps> = ({ projects, onClea
                       href={project.githubUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2 py-1 text-xs text-zinc-400 hover:text-purple-400 bg-zinc-800/50 hover:bg-zinc-800 rounded transition-colors"
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-zinc-400 hover:text-red-400 bg-zinc-800/50 hover:bg-zinc-800 rounded transition-colors"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <ExternalLink className="h-3 w-3" />
@@ -123,7 +123,7 @@ export const ProjectHistory: React.FC<ProjectHistoryProps> = ({ projects, onClea
                       href={project.vercelUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2 py-1 text-xs text-zinc-400 hover:text-purple-400 bg-zinc-800/50 hover:bg-zinc-800 rounded transition-colors"
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-zinc-400 hover:text-red-400 bg-zinc-800/50 hover:bg-zinc-800 rounded transition-colors"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <ExternalLink className="h-3 w-3" />
@@ -135,7 +135,7 @@ export const ProjectHistory: React.FC<ProjectHistoryProps> = ({ projects, onClea
                       href={project.supabaseUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2 py-1 text-xs text-zinc-400 hover:text-purple-400 bg-zinc-800/50 hover:bg-zinc-800 rounded transition-colors"
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-zinc-400 hover:text-red-400 bg-zinc-800/50 hover:bg-zinc-800 rounded transition-colors"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <ExternalLink className="h-3 w-3" />

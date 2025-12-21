@@ -298,7 +298,7 @@ export const PreviewIframe: React.FC<PreviewIframeProps> = ({
                   {/* Header */}
                   <div className="text-center mb-8">
                     <motion.div
-                      className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30 mb-4"
+                      className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-red-500/20 to-pink-500/20 border border-red-500/30 mb-4"
                       animate={{ 
                         scale: [1, 1.05, 1],
                         boxShadow: [
@@ -309,7 +309,7 @@ export const PreviewIframe: React.FC<PreviewIframeProps> = ({
                       }}
                       transition={{ duration: 2, repeat: Infinity }}
                     >
-                      <Rocket className="w-8 h-8 text-purple-400" />
+                      <Rocket className="w-8 h-8 text-red-400" />
                     </motion.div>
                     <h3 className="text-lg font-semibold text-white mb-2">Deploying to Vercel</h3>
                     <p className="text-sm text-zinc-400">
@@ -321,11 +321,11 @@ export const PreviewIframe: React.FC<PreviewIframeProps> = ({
                   <div className="mb-6">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs text-zinc-500">Build Progress</span>
-                      <span className="text-xs text-purple-400 font-mono">{Math.round(buildProgress)}%</span>
+                      <span className="text-xs text-red-400 font-mono">{Math.round(buildProgress)}%</span>
                     </div>
                     <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
                       <motion.div
-                        className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+                        className="h-full bg-gradient-to-r from-red-500 to-pink-500"
                         initial={{ width: 0 }}
                         animate={{ width: `${buildProgress}%` }}
                         transition={{ duration: 0.3 }}
@@ -344,7 +344,7 @@ export const PreviewIframe: React.FC<PreviewIframeProps> = ({
                         <motion.div
                           key={stage.id}
                           className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
-                            isActive ? 'bg-purple-500/10 border border-purple-500/20' :
+                            isActive ? 'bg-red-500/10 border border-red-500/20' :
                             isComplete ? 'opacity-60' : 'opacity-30'
                           }`}
                           initial={{ opacity: 0, x: -10 }}
@@ -353,7 +353,7 @@ export const PreviewIframe: React.FC<PreviewIframeProps> = ({
                         >
                           <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
                             isComplete ? 'bg-green-500/20' :
-                            isActive ? 'bg-purple-500/20' : 'bg-zinc-800'
+                            isActive ? 'bg-red-500/20' : 'bg-zinc-800'
                           }`}>
                             {isComplete ? (
                               <CheckCircle2 className="w-4 h-4 text-green-400" />
@@ -362,14 +362,14 @@ export const PreviewIframe: React.FC<PreviewIframeProps> = ({
                                 animate={{ rotate: 360 }}
                                 transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                               >
-                                <StageIcon className="w-4 h-4 text-purple-400" />
+                                <StageIcon className="w-4 h-4 text-red-400" />
                               </motion.div>
                             ) : (
                               <StageIcon className="w-4 h-4 text-zinc-600" />
                             )}
                           </div>
                           <span className={`text-sm ${
-                            isActive ? 'text-purple-400 font-medium' :
+                            isActive ? 'text-red-400 font-medium' :
                             isComplete ? 'text-green-400' : 'text-zinc-600'
                           }`}>
                             {stage.label}
@@ -380,9 +380,9 @@ export const PreviewIframe: React.FC<PreviewIframeProps> = ({
                               animate={{ opacity: [0.3, 1, 0.3] }}
                               transition={{ duration: 1, repeat: Infinity }}
                             >
-                              <div className="w-1 h-1 rounded-full bg-purple-400" />
-                              <div className="w-1 h-1 rounded-full bg-purple-400" />
-                              <div className="w-1 h-1 rounded-full bg-purple-400" />
+                              <div className="w-1 h-1 rounded-full bg-red-400" />
+                              <div className="w-1 h-1 rounded-full bg-red-400" />
+                              <div className="w-1 h-1 rounded-full bg-red-400" />
                             </motion.div>
                           )}
                         </motion.div>
@@ -420,7 +420,7 @@ export const PreviewIframe: React.FC<PreviewIframeProps> = ({
                     animate={{ rotate: 360 }}
                     transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
                   >
-                    <div className="h-12 w-12 border-4 border-purple-500 border-t-transparent rounded-full" />
+                    <div className="h-12 w-12 border-4 border-red-500 border-t-transparent rounded-full" />
                   </motion.div>
                   <p className="mt-4 text-sm text-zinc-400">Loading preview...</p>
                 </div>

@@ -88,11 +88,11 @@
 
 /* Glow effects */
 .glow-purple {
-  box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.35);
 }
 
 .glow-purple-strong {
-  box-shadow: 0 0 40px rgba(168, 85, 247, 0.5);
+  box-shadow: 0 0 40px rgba(239, 68, 68, 0.55);
 }
 
 /* Shimmer animation for progress bar */
