@@ -1631,6 +1631,24 @@ export function detectErrorsFromBuildOutput(buildOutput: string): DetectedError[
  */
 export function preCheckCode(code: string, fileName: string): DetectedError[] {
   const errors: DetectedError[] = [];
+
+  // ---------------------------------------------------------------------------
+  // TS1127: Invalid character (invisible/control Unicode)
+  // IMPORTANT: preCheckCode does NOT iterate ALL_ERROR_PATTERNS; it performs a
+  // set of fast heuristics. So we MUST detect TS1127 here explicitly, otherwise
+  // it will never be auto-fixed during create/update file writes.
+  // ---------------------------------------------------------------------------
+  if (INVALID_UNICODE_PATTERN.test(code)) {
+    // Reset global regex state for reuse
+    INVALID_UNICODE_PATTERN.lastIndex = 0;
+    errors.push({
+      id: 'ts1127-invalid-unicode',
+      message: 'Contains invalid/invisible Unicode characters that can trigger TS1127 (Invalid character)',
+      severity: 'error',
+      canAutoFix: true,
+      action: 'AUTO_FIX',
+    });
+  }
   
   // Check for unescaped > in JSX
   if (fileName.endsWith('.tsx') || fileName.endsWith('.jsx')) {
