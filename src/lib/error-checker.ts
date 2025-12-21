@@ -83,10 +83,70 @@ export interface BuildConfigError {
 export type FileSet = Record<string, string>;
 
 // =============================================================================
+// Unicode Sanitization (prevents TS1127: Invalid character)
+// =============================================================================
+//
+// TS1127 is commonly caused by invisible/control Unicode characters that sneak
+// in via copy/paste (PDFs, web pages, Word, etc). We aggressively normalize the
+// known-bad set while preserving normal non-ASCII content where safe.
+const INVALID_UNICODE_PATTERN =
+  /[\u200B-\u200F\u2028\u2029\u202A-\u202F\u2060\uFEFF\u00A0\u00AD\u180E\u3000\u2010-\u2015\u2212\u2018\u2019\u201C\u201D\u201A\u201B\u201E\u201F\u2032\u2033\u00AB\u00BB\u2026]|[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g;
+
+function sanitizeInvalidUnicode(code: string): string {
+  if (!INVALID_UNICODE_PATTERN.test(code)) return code;
+  // Reset regex state for global pattern reuse
+  INVALID_UNICODE_PATTERN.lastIndex = 0;
+
+  return code
+    // Zero-width and direction marks - remove
+    .replace(/[\u200B-\u200F]/g, '')
+    .replace(/[\u202A-\u202F]/g, '')
+    .replace(/\u2060/g, '')
+    .replace(/\uFEFF/g, '')
+    .replace(/\u00AD/g, '')
+    .replace(/\u180E/g, '')
+
+    // Line/paragraph separators -> newline
+    .replace(/[\u2028\u2029]/g, '\n')
+
+    // Special spaces -> regular space
+    .replace(/[\u00A0\u3000]/g, ' ')
+    .replace(/[\u2000-\u200A]/g, ' ')
+
+    // Smart quotes -> straight quotes
+    .replace(/[\u2018\u2019\u201A\u201B\u2032]/g, "'")
+    .replace(/[\u201C\u201D\u201E\u201F\u2033]/g, '"')
+    .replace(/[\u00AB\u00BB]/g, '"')
+
+    // Dashes -> hyphen
+    .replace(/[\u2010-\u2015\u2212]/g, '-')
+
+    // Ellipsis -> three dots
+    .replace(/\u2026/g, '...')
+
+    // Control chars (except \n, \t, \r) -> remove
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '');
+}
+
+// =============================================================================
 // CATEGORY 1: TYPESCRIPT COMPILATION ERRORS
 // =============================================================================
 
 const typescriptSyntaxErrors: ErrorPattern[] = [
+  {
+    id: 'ts1127-invalid-unicode',
+    category: 'typescript',
+    pattern: INVALID_UNICODE_PATTERN,
+    description: 'Invalid/invisible Unicode characters that can trigger TS1127 (Invalid character)',
+    severity: 'error',
+    examples: [
+      '❌ Zero-width spaces, BOM, NBSP, smart quotes, em/en dashes (invisible in editors)',
+      '✅ Normalized to ASCII equivalents (spaces/quotes/hyphens) or removed where safe',
+    ],
+    autoFix: (code) => sanitizeInvalidUnicode(code),
+    recommendation: 'Retype the affected line or paste as plain text. Avoid copy/paste from PDFs/Word.',
+    action: 'AUTO_FIX',
+  },
   {
     id: 'jsx-unescaped-gt',
     category: 'jsx',

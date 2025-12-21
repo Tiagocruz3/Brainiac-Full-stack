@@ -855,7 +855,7 @@ Use create_app_from_template to avoid rate limits and build 10x faster!`;
               onProgress('creating_repo', `Creating file: ${toolInput.path}...`, createFileProgress);
               
               // 🔍 Pre-check file for errors before creating
-              if (toolInput.path.endsWith('.tsx') || toolInput.path.endsWith('.ts')) {
+              if (toolInput.path.endsWith('.tsx') || toolInput.path.endsWith('.ts') || toolInput.path.endsWith('.jsx') || toolInput.path.endsWith('.js')) {
                 const fileErrors = ERROR_CHECKER.preCheck(toolInput.content, toolInput.path);
                 if (fileErrors.length > 0) {
                   console.log(`⚠️ Pre-check found ${fileErrors.length} issues in ${toolInput.path}`);
@@ -882,7 +882,7 @@ Use create_app_from_template to avoid rate limits and build 10x faster!`;
               onProgress('creating_repo', `Updating file: ${toolInput.path}...`, 68);
               
               // 🔍 Pre-check updated file for errors
-              if (toolInput.path.endsWith('.tsx') || toolInput.path.endsWith('.ts')) {
+              if (toolInput.path.endsWith('.tsx') || toolInput.path.endsWith('.ts') || toolInput.path.endsWith('.jsx') || toolInput.path.endsWith('.js')) {
                 const updateFileErrors = ERROR_CHECKER.preCheck(toolInput.content, toolInput.path);
                 
                 // Check for critical security issues
