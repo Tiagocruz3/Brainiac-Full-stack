@@ -64,8 +64,12 @@ async function runPreDeploymentChecks(
     if (path.endsWith('.tsx') || path.endsWith('.ts') || path.endsWith('.jsx') || path.endsWith('.js')) {
       // First, check for and fix invalid characters (TS1127)
       let currentContent = content;
-      const invalidCharPattern = /[\u200B\u200C\u200D\uFEFF\u00A0\u2018\u2019\u201C\u201D\u2013\u2014]/g;
-      if (invalidCharPattern.test(currentContent)) {
+      
+      // Check if there are problematic Unicode characters that need fixing (causes TS1127)
+      // This pattern catches: zero-width chars, smart quotes, special spaces, dashes, control chars
+      const hasProblematicChars = /[\u200B-\u200F\u2028-\u202F\uFEFF\u00A0\u2018\u2019\u201C\u201D\u2013\u2014\u2026\u00AD\u2010-\u2015\u2032\u2033\u2039\u203A\u00AB\u00BB\u2060\u180E\u3000\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/.test(currentContent);
+      
+      if (hasProblematicChars) {
         allErrors.push({
           id: 'invalid-characters',
           message: `[${path}] Contains invalid Unicode characters (TS1127)`,
@@ -73,17 +77,34 @@ async function runPreDeploymentChecks(
           canAutoFix: true,
         });
         
-        // Auto-fix: replace invalid characters
+        // Auto-fix: comprehensive replacement of ALL problematic characters
         currentContent = currentContent
-          .replace(/\u200B/g, '')  // Zero-width space - remove
-          .replace(/\u200C/g, '')  // Zero-width non-joiner - remove
-          .replace(/\u200D/g, '')  // Zero-width joiner - remove
-          .replace(/\uFEFF/g, '')  // BOM - remove
-          .replace(/\u00A0/g, ' ') // Non-breaking space → regular space
-          .replace(/[\u2018\u2019]/g, "'") // Smart single quotes → straight
-          .replace(/[\u201C\u201D]/g, '"') // Smart double quotes → straight
-          .replace(/\u2013/g, '-') // En dash → hyphen
-          .replace(/\u2014/g, '-'); // Em dash → hyphen
+          // Zero-width and invisible characters - REMOVE
+          .replace(/[\u200B-\u200F]/g, '')  // Zero-width spaces & direction marks
+          .replace(/[\u2028\u2029]/g, '\n') // Line/paragraph separators → newline
+          .replace(/[\u202A-\u202F]/g, '')  // Direction formatting - remove
+          .replace(/\uFEFF/g, '')           // BOM - remove
+          .replace(/\u00AD/g, '')           // Soft hyphen - remove
+          .replace(/\u2060/g, '')           // Word joiner - remove
+          .replace(/\u180E/g, '')           // Mongolian vowel separator - remove
+          
+          // Special spaces → regular space
+          .replace(/[\u00A0\u2000-\u200A\u3000]/g, ' ')
+          
+          // Smart quotes → straight quotes
+          .replace(/[\u2018\u2019\u201A\u201B\u2032\u2039\u203A]/g, "'") // Single quotes
+          .replace(/[\u201C\u201D\u201E\u201F\u2033\u00AB\u00BB]/g, '"') // Double quotes
+          
+          // Special dashes → regular hyphen
+          .replace(/[\u2010-\u2015\u2212]/g, '-') // Various dashes
+          .replace(/\u2013/g, '-')  // En dash
+          .replace(/\u2014/g, '-')  // Em dash
+          
+          // Ellipsis → three dots
+          .replace(/\u2026/g, '...')
+          
+          // Remove any remaining control characters (except newline, tab, carriage return)
+          .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '');
         
         fixedFiles[path] = currentContent;
         totalAutoFixed++;
