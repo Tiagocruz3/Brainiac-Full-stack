@@ -311,6 +311,29 @@ const typescriptSyntaxErrors: ErrorPattern[] = [
     }
   },
   {
+    id: 'jsx-unescaped-rbrace',
+    category: 'jsx',
+    // Build logs often show TS1381 for this. We also detect in preCheckCode; keep here for build-output parsing.
+    pattern: /TS1381|Unexpected token.*\{'\}'\}.*&rbrace;/,
+    description: 'Unescaped } character in JSX text',
+    severity: 'error',
+    examples: [
+      '❌ <span>Value }</span>',
+      '✅ <span>Value &rbrace;</span>',
+      '✅ <span>Value {\\\'}\\\'} </span>',
+    ],
+    autoFix: (code) => {
+      // Conservative: replace } in common text contexts before closing tags with &rbrace;
+      return code
+        .replace(/}(\s*)<\/span>/g, '&rbrace;$1</span>')
+        .replace(/}(\s*)<\/div>/g, '&rbrace;$1</div>')
+        .replace(/}(\s*)<\/p>/g, '&rbrace;$1</p>')
+        .replace(/}(\s*)<\/button>/g, '&rbrace;$1</button>')
+        .replace(/}(\s*)<\/Button>/g, '&rbrace;$1</Button>');
+    },
+    action: 'AUTO_FIX',
+  },
+  {
     id: 'jsx-unescaped-lt',
     category: 'jsx',
     pattern: /TS1003|Identifier expected/,
@@ -1795,19 +1818,46 @@ export function preCheckCode(code: string, fileName: string): DetectedError[] {
     });
   }
   
-  // Check for unescaped > in JSX
+  // Check for unescaped > and } in JSX + template literals in className (common TS1005/TS1002/TS1381/TS1382 causes)
   if (fileName.endsWith('.tsx') || fileName.endsWith('.jsx')) {
+    // 1) Block template literals in className (frequent TS1005 ',' expected / parser explosions)
+    // Examples:
+    // - className={`text-white ${isActive ? 'font-bold' : ''}`}
+    // - className={\`...\${...}\`}
+    if (/className\s*=\s*\{\s*`/.test(code) || /className\s*=\s*`/.test(code) || /className=\{`/.test(code)) {
+      errors.push({
+        id: 'template-literal-in-classname',
+        message: 'Template literal used in className. This commonly causes TS1005/TS1002 parsing errors. Use cn() or string concat instead.',
+        severity: 'error',
+        canAutoFix: false,
+        action: 'BLOCK_DEPLOYMENT',
+      });
+    }
+
     // Look for patterns like >< or >\n that aren't closing tags
     const lines = code.split('\n');
     lines.forEach((line, index) => {
       // Check for > in text content (not in tags)
-      if (/>(?![<\s/])[^<]*<\//.test(line) && !line.includes('{\'>\'}') && !line.includes('→')) {
+      if (/>(?![<\s/])[^<]*<\//.test(line) && !line.includes('{\'>\'}') && !line.includes('&gt;') && !line.includes('→')) {
         errors.push({
           id: 'jsx-unescaped-gt',
           line: index + 1,
-          message: 'Possible unescaped > in JSX text',
-          severity: 'warning',
+          message: 'Unescaped > in JSX text (can cause TS1382). Use {\'>\'} or &gt; or replace with →',
+          severity: 'error',
           canAutoFix: true,
+          action: 'AUTO_FIX',
+        });
+      }
+
+      // Check for } in text content (can cause TS1381). Prefer &rbrace; (safe in JSX text)
+      if (/>[^<]*}[^<]*<\//.test(line) && !line.includes('&rbrace;') && !line.includes("{'}'}")) {
+        errors.push({
+          id: 'jsx-unescaped-rbrace',
+          line: index + 1,
+          message: 'Unescaped } in JSX text (can cause TS1381). Use &rbrace; or {\\\'}\\\'}',
+          severity: 'error',
+          canAutoFix: true,
+          action: 'AUTO_FIX',
         });
       }
     });
@@ -2305,7 +2355,11 @@ export function getCriticalErrors(errors: DetectedError[]): DetectedError[] {
  * Check if deployment should be blocked
  */
 export function shouldBlockDeployment(errors: DetectedError[]): boolean {
-  return errors.some(e => e.severity === 'critical' || e.action === 'BLOCK_DEPLOYMENT');
+  // Block if:
+  // - any critical issue
+  // - explicitly marked BLOCK_DEPLOYMENT
+  // - any remaining 'error' (these usually mean tsc/vite build will fail)
+  return errors.some(e => e.severity === 'critical' || e.action === 'BLOCK_DEPLOYMENT' || e.severity === 'error');
 }
 
 /**
