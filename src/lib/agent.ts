@@ -356,6 +356,14 @@ type SelfHealResult = {
   rawResponseText: string;
 };
 
+function decodeBase64Utf8(b64: string): string {
+  // atob returns a binary string; decode it as UTF-8
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+}
+
 function pickFilesForSelfHeal(files: FileSet, errors: DetectedError[], maxFiles: number = 3): string[] {
   const counts = new Map<string, number>();
   for (const e of errors) {
@@ -390,11 +398,11 @@ async function selfHealFilesWithModel(
   onProgress('self_heal', `🩹 Self-healing code (attempt ${attempt}/${maxAttempts})...`, 46);
   await sleep(200);
 
-  const prompt = `You are a TypeScript/Vite build fixer.\n\nYour task:\n- Fix the provided files so they compile with: \"tsc && vite build\".\n- Address ALL listed errors.\n- DO NOT add new dependencies.\n- DO NOT use template literals (backticks) inside JSX attributes like className.\n- Escape JSX text special characters properly (e.g. use &gt; for > and &rbrace; for }).\n- Remove any invisible/invalid Unicode characters.\n- Keep the app's behavior and layout the same unless needed for correctness.\n\nReturn STRICT JSON ONLY (no markdown) in this format:\n{\n  \"files\": {\n    \"path/to/file\": \"FULL FILE CONTENT\",\n    ...\n  }\n}\nOnly include files you changed.\n\nErrors:\n${errorList}\n\nFiles:\n${targetFiles.map(p => `--- ${p} ---\n${files[p]}\n`).join('\n')}\n`;
+  const prompt = `You are a TypeScript/Vite build fixer.\n\nYour task:\n- Fix the provided files so they compile with: \"tsc && vite build\".\n- Address ALL listed errors.\n- DO NOT add new dependencies.\n- DO NOT use template literals (backticks) inside JSX attributes like className.\n- Escape JSX text special characters properly (e.g. use &gt; for > and &rbrace; for }).\n- Remove any invisible/invalid Unicode characters.\n- Keep the app's behavior and layout the same unless needed for correctness.\n\nReturn STRICT JSON ONLY (no markdown, no code fences). IMPORTANT: file contents MUST be base64 encoded so the JSON is always valid.\n\nFormat:\n{\n  \"files\": {\n    \"path/to/file\": { \"encoding\": \"base64\", \"content\": \"...\" },\n    ...\n  }\n}\nOnly include files you changed.\n\nErrors:\n${errorList}\n\nFiles:\n${targetFiles.map(p => `--- ${p} ---\n${files[p]}\n`).join('\n')}\n`;
 
   const response = await client.messages.create({
     model,
-    max_tokens: 2500,
+    max_tokens: 6000,
     temperature: 0,
     messages: [{ role: 'user', content: prompt }],
   });
@@ -415,14 +423,51 @@ async function selfHealFilesWithModel(
     parsed = JSON.parse(jsonText);
   } catch (e) {
     console.warn('⚠️ Self-heal produced non-JSON output');
-    throw new Error(`Self-heal failed: model did not return valid JSON. Output starts with: ${text.slice(0, 120)}`);
+    // One retry with an even stricter prompt and smaller output request
+    onProgress('self_heal', '🩹 Self-heal output was invalid JSON. Retrying...', 47);
+
+    const retryPrompt = `Return ONLY valid JSON (no markdown, no code fences). File contents MUST be base64.\n\nFormat:\n{\n  \"files\": {\n    \"path/to/file\": { \"encoding\": \"base64\", \"content\": \"...\" }\n  }\n}\n\nOnly include the files you changed.\n\nErrors:\n${errorList}\n\nFiles:\n${targetFiles.map(p => `--- ${p} ---\n${files[p]}\n`).join('\n')}\n`;
+
+    const retry = await client.messages.create({
+      model,
+      max_tokens: 4000,
+      temperature: 0,
+      messages: [{ role: 'user', content: retryPrompt }],
+    });
+
+    const retryText = retry.content
+      .filter((b: any) => b.type === 'text')
+      .map((b: any) => b.text)
+      .join('\n')
+      .trim();
+
+    const rs = retryText.indexOf('{');
+    const re = retryText.lastIndexOf('}');
+    const retryJsonText = rs >= 0 && re >= 0 ? retryText.slice(rs, re + 1) : retryText;
+
+    try {
+      parsed = JSON.parse(retryJsonText);
+    } catch {
+      throw new Error(`Self-heal failed: model did not return valid JSON. Output starts with: ${retryText.slice(0, 120)}`);
+    }
   }
 
-  const patchFiles: FileSet = parsed?.files && typeof parsed.files === 'object' ? parsed.files : {};
+  const patchFilesRaw: any = parsed?.files && typeof parsed.files === 'object' ? parsed.files : {};
   const updatedFiles: FileSet = { ...files };
-  for (const [p, c] of Object.entries(patchFiles)) {
-    if (typeof c === 'string' && c.length > 0) {
-      updatedFiles[p] = c;
+  for (const [p, v] of Object.entries(patchFilesRaw)) {
+    // Only accept edits for files we asked the model to heal
+    if (!targetFiles.includes(p)) continue;
+
+    // Backwards compatibility: older format where value is raw string
+    if (typeof v === 'string' && v.length > 0) {
+      updatedFiles[p] = v;
+      continue;
+    }
+
+    // New format: base64 object
+    if (v && typeof v === 'object' && (v as any).encoding === 'base64' && typeof (v as any).content === 'string') {
+      updatedFiles[p] = decodeBase64Utf8((v as any).content);
+      continue;
     }
   }
 
