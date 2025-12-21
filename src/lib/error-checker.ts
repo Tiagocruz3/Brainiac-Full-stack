@@ -89,20 +89,44 @@ export type FileSet = Record<string, string>;
 // TS1127 is commonly caused by invisible/control Unicode characters that sneak
 // in via copy/paste (PDFs, web pages, Word, etc). We aggressively normalize the
 // known-bad set while preserving normal non-ASCII content where safe.
+// Includes common troublemakers plus a safety-net removal of Unicode format/control chars.
+// Notably adds:
+// - Bidi controls/isolation chars (U+061C, U+2066–U+2069)
+// - Variation selectors (U+FE00–U+FE0F) which can ride along with emoji
 const INVALID_UNICODE_PATTERN =
-  /[\u200B-\u200F\u2028\u2029\u202A-\u202F\u2060\uFEFF\u00A0\u00AD\u180E\u3000\u2010-\u2015\u2212\u2018\u2019\u201C\u201D\u201A\u201B\u201E\u201F\u2032\u2033\u00AB\u00BB\u2026]|[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g;
+  /[\u200B-\u200F\u2028\u2029\u202A-\u202F\u2060\u2066-\u2069\u061C\uFEFF\uFE00-\uFE0F\u00A0\u00AD\u180E\u3000\u2010-\u2015\u2212\u2018\u2019\u201C\u201D\u201A\u201B\u201E\u201F\u2032\u2033\u00AB\u00BB\u2026]|[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g;
+
+function stripUnicodeFormatControlSurrogates(code: string): string {
+  // Try Unicode property escapes (modern browsers). Fallback if unsupported.
+  try {
+    // Cf = Format, Cc = Control, Cs = Surrogate
+    // Keep normal whitespace controls that are valid in source: \n \r \t
+    return code.replace(/[\p{Cf}\p{Cs}]/gu, '').replace(/[\p{Cc}]/gu, (ch) => {
+      if (ch === '\n' || ch === '\r' || ch === '\t') return ch;
+      return '';
+    });
+  } catch {
+    // Fallback: remove a broad set of known-format controls + any remaining C0/C1 controls
+    return code
+      .replace(/[\u061C\u200B-\u200F\u202A-\u202F\u2060\u2066-\u2069\uFEFF]/g, '')
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '');
+  }
+}
 
 function sanitizeInvalidUnicode(code: string): string {
   if (!INVALID_UNICODE_PATTERN.test(code)) return code;
   // Reset regex state for global pattern reuse
   INVALID_UNICODE_PATTERN.lastIndex = 0;
 
-  return code
+  const normalized = code
     // Zero-width and direction marks - remove
     .replace(/[\u200B-\u200F]/g, '')
     .replace(/[\u202A-\u202F]/g, '')
     .replace(/\u2060/g, '')
+    .replace(/[\u2066-\u2069]/g, '')
+    .replace(/\u061C/g, '')
     .replace(/\uFEFF/g, '')
+    .replace(/[\uFE00-\uFE0F]/g, '')
     .replace(/\u00AD/g, '')
     .replace(/\u180E/g, '')
 
@@ -126,6 +150,9 @@ function sanitizeInvalidUnicode(code: string): string {
 
     // Control chars (except \n, \t, \r) -> remove
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '');
+
+  // Safety net: strip any remaining format/control/surrogate chars that can still trigger TS1127
+  return stripUnicodeFormatControlSurrogates(normalized);
 }
 
 // =============================================================================
