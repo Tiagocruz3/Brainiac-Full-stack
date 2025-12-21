@@ -112,6 +112,40 @@ ${content}`;
         await sleep(100);
       }
     }
+    
+    // Check HTML files for escaped quotes (parse5 error prevention)
+    if (path.endsWith('.html')) {
+      // Check for escaped quotes that will cause parse5 errors
+      const escapedQuotePattern = /\\"/g;
+      if (escapedQuotePattern.test(content)) {
+        allErrors.push({
+          id: 'html-escaped-quotes',
+          message: `[${path}] Contains escaped quotes (\\"  ) that will cause HTML parse error`,
+          severity: 'error',
+          canAutoFix: true,
+        });
+        
+        // Auto-fix: replace escaped quotes with normal quotes
+        const fixedHtml = content.replace(/\\"/g, '"');
+        fixedFiles[path] = fixedHtml;
+        totalAutoFixed++;
+        onProgress('auto_fix', `✅ Fixed escaped quotes in ${path}`, Math.floor(scanProgress));
+        console.log(`✅ Auto-fixed escaped quotes in ${path}`);
+        await sleep(100);
+      }
+      
+      // Also check for other common HTML issues
+      if (content.includes('type=\\"module\\"') || content.includes("type=\\'module\\'")) {
+        allErrors.push({
+          id: 'html-malformed-script-type',
+          message: `[${path}] Script tag has malformed type attribute`,
+          severity: 'error',
+          canAutoFix: true,
+        });
+        
+        // Already fixed above with escaped quote replacement
+      }
+    }
   }
   
   // ========================================

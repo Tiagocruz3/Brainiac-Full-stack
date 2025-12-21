@@ -1023,6 +1023,21 @@ These issues have caused failed deployments before. Always avoid them:
      - TypeScript expects different tokens at those positions
    - **REMEMBER**: Never use template literals (backticks) for className - use cn() instead!
 
+7. **HTML Parse Error - Escaped Quotes (parse5 error)**
+   - **Error**: \`[vite:build-html] Unable to parse HTML; parse5 error code unexpected-character-in-unquoted-attribute-value\`
+   - **Cause**: Escaped quotes (\\\\\") appear in HTML instead of regular quotes (")
+   - **WRONG** (escaped quotes leak into HTML):
+     \`\`\`html
+     <script type=\\"module\\" src="/src/main.tsx"></script>
+     \`\`\`
+   - **CORRECT** (normal quotes):
+     \`\`\`html
+     <script type="module" src="/src/main.tsx"></script>
+     \`\`\`
+   - **WHY THIS HAPPENS**: When generating file content, JSON escaping (\\\\\") leaks into the actual file
+   - **FIX**: NEVER include backslash-escaped quotes in HTML files. Use normal quotes only.
+   - **CRITICAL**: The index.html file must have clean, unescaped quotes for all attributes
+
 # CODE STRUCTURE
 
 ## package.json
