@@ -474,6 +474,20 @@ async function selfHealFilesWithModel(
   return { updatedFiles, rawResponseText: text };
 }
 
+function buildHealerModelCandidates(selectedModel: string): string[] {
+  // Prefer a stable, instruction-following model for structured self-heal.
+  // Keep the user's selected model as a fallback if desired.
+  const preferred = [
+    'claude-3-5-sonnet-20241022',
+    'claude-3-7-sonnet-20250219',
+    'claude-sonnet-4-20250514',
+    'claude-3-haiku-20240307',
+  ];
+  const candidates = [selectedModel, ...preferred].filter(Boolean);
+  // Deduplicate preserving order
+  return candidates.filter((m, i) => candidates.indexOf(m) === i);
+}
+
 export interface AgentResponse {
   success: boolean;
   message: string;
@@ -868,15 +882,34 @@ Use create_app_from_template to avoid rate limits and build 10x faster!`;
                 for (let attempt = 1; attempt <= maxHealAttempts && checkResult.hasBlockingErrors; attempt++) {
                   try {
                     onProgress('self_heal', `🩹 Attempting self-heal (${attempt}/${maxHealAttempts})...`, 45);
-                    const healed = await selfHealFilesWithModel(
-                      client,
-                      model,
-                      previewFiles,
-                      checkResult.errors,
-                      onProgress,
-                      attempt,
-                      maxHealAttempts
-                    );
+                    const healerModels = buildHealerModelCandidates(model);
+                    let healed: SelfHealResult | null = null;
+                    let lastHealError: any = null;
+
+                    for (const healerModel of healerModels) {
+                      try {
+                        onProgress('self_heal', `🩹 Healing with ${healerModel}...`, 45);
+                        healed = await selfHealFilesWithModel(
+                          client,
+                          healerModel,
+                          previewFiles,
+                          checkResult.errors,
+                          onProgress,
+                          attempt,
+                          maxHealAttempts
+                        );
+                        break;
+                      } catch (hmErr: any) {
+                        lastHealError = hmErr;
+                        console.warn(`⚠️ Self-heal failed with model ${healerModel}:`, hmErr?.message || hmErr);
+                        continue;
+                      }
+                    }
+
+                    if (!healed) {
+                      throw lastHealError || new Error('Self-heal failed with all healer models');
+                    }
+
                     previewFiles = healed.updatedFiles;
 
                     // Re-parse package.json in case it was changed (shouldn't, but safe)
