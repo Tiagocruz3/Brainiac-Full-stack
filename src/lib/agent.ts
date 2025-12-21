@@ -351,6 +351,84 @@ ${content}`;
   };
 }
 
+type SelfHealResult = {
+  updatedFiles: FileSet;
+  rawResponseText: string;
+};
+
+function pickFilesForSelfHeal(files: FileSet, errors: DetectedError[], maxFiles: number = 3): string[] {
+  const counts = new Map<string, number>();
+  for (const e of errors) {
+    const m = /^\[([^\]]+)\]/.exec(e.message || '');
+    const path = m?.[1];
+    if (path && files[path]) {
+      counts.set(path, (counts.get(path) || 0) + 1);
+    }
+  }
+  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([p]) => p);
+  if (sorted.length > 0) return sorted.slice(0, maxFiles);
+  // Fallback
+  return files['src/App.tsx'] ? ['src/App.tsx'] : Object.keys(files).slice(0, maxFiles);
+}
+
+async function selfHealFilesWithModel(
+  client: Anthropic,
+  model: string,
+  files: FileSet,
+  errors: DetectedError[],
+  onProgress: ProgressCallback,
+  attempt: number,
+  maxAttempts: number
+): Promise<SelfHealResult> {
+  const targetFiles = pickFilesForSelfHeal(files, errors, 3);
+  const errorList = errors
+    .filter(e => e.severity === 'error' || e.severity === 'critical' || e.action === 'BLOCK_DEPLOYMENT')
+    .slice(0, 25)
+    .map(e => `- ${e.message}`)
+    .join('\n');
+
+  onProgress('self_heal', `🩹 Self-healing code (attempt ${attempt}/${maxAttempts})...`, 46);
+  await sleep(200);
+
+  const prompt = `You are a TypeScript/Vite build fixer.\n\nYour task:\n- Fix the provided files so they compile with: \"tsc && vite build\".\n- Address ALL listed errors.\n- DO NOT add new dependencies.\n- DO NOT use template literals (backticks) inside JSX attributes like className.\n- Escape JSX text special characters properly (e.g. use &gt; for > and &rbrace; for }).\n- Remove any invisible/invalid Unicode characters.\n- Keep the app's behavior and layout the same unless needed for correctness.\n\nReturn STRICT JSON ONLY (no markdown) in this format:\n{\n  \"files\": {\n    \"path/to/file\": \"FULL FILE CONTENT\",\n    ...\n  }\n}\nOnly include files you changed.\n\nErrors:\n${errorList}\n\nFiles:\n${targetFiles.map(p => `--- ${p} ---\n${files[p]}\n`).join('\n')}\n`;
+
+  const response = await client.messages.create({
+    model,
+    max_tokens: 2500,
+    temperature: 0,
+    messages: [{ role: 'user', content: prompt }],
+  });
+
+  const text = response.content
+    .filter((b: any) => b.type === 'text')
+    .map((b: any) => b.text)
+    .join('\n')
+    .trim();
+
+  // Extract JSON (some models may prefix/suffix whitespace)
+  const jsonStart = text.indexOf('{');
+  const jsonEnd = text.lastIndexOf('}');
+  const jsonText = jsonStart >= 0 && jsonEnd >= 0 ? text.slice(jsonStart, jsonEnd + 1) : text;
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch (e) {
+    console.warn('⚠️ Self-heal produced non-JSON output');
+    throw new Error(`Self-heal failed: model did not return valid JSON. Output starts with: ${text.slice(0, 120)}`);
+  }
+
+  const patchFiles: FileSet = parsed?.files && typeof parsed.files === 'object' ? parsed.files : {};
+  const updatedFiles: FileSet = { ...files };
+  for (const [p, c] of Object.entries(patchFiles)) {
+    if (typeof c === 'string' && c.length > 0) {
+      updatedFiles[p] = c;
+    }
+  }
+
+  return { updatedFiles, rawResponseText: text };
+}
+
 export interface AgentResponse {
   success: boolean;
   message: string;
@@ -735,18 +813,59 @@ Use create_app_from_template to avoid rate limits and build 10x faster!`;
               }
               
               // Run comprehensive checks with progress updates
-              const checkResult = await runPreDeploymentChecks(previewFiles, packageJson, onProgress);
+              let checkResult = await runPreDeploymentChecks(previewFiles, packageJson, onProgress);
+
+              // =============================================================
+              // 🩹 SELF-HEAL LOOP (when blocking errors exist)
+              // =============================================================
+              if (checkResult.hasBlockingErrors) {
+                const maxHealAttempts = 2;
+                for (let attempt = 1; attempt <= maxHealAttempts && checkResult.hasBlockingErrors; attempt++) {
+                  try {
+                    onProgress('self_heal', `🩹 Attempting self-heal (${attempt}/${maxHealAttempts})...`, 45);
+                    const healed = await selfHealFilesWithModel(
+                      client,
+                      model,
+                      previewFiles,
+                      checkResult.errors,
+                      onProgress,
+                      attempt,
+                      maxHealAttempts
+                    );
+                    previewFiles = healed.updatedFiles;
+
+                    // Re-parse package.json in case it was changed (shouldn't, but safe)
+                    try {
+                      if (previewFiles['package.json']) {
+                        packageJson = JSON.parse(previewFiles['package.json']);
+                      }
+                    } catch {
+                      // ignore
+                    }
+
+                    // Re-run checks after healing
+                    checkResult = await runPreDeploymentChecks(previewFiles, packageJson, onProgress);
+                  } catch (healErr: any) {
+                    console.error('❌ Self-heal attempt failed:', healErr);
+                    break;
+                  }
+                }
+              }
               
               // Check for blocking errors
               if (checkResult.hasBlockingErrors) {
                 const criticalErrors = ERROR_CHECKER.getCriticalErrors(checkResult.errors);
-                console.error('🛑 CRITICAL ERRORS - Cannot deploy:', criticalErrors);
+                const allBlocking = checkResult.errors.filter(e =>
+                  e.severity === 'error' || e.severity === 'critical' || e.action === 'BLOCK_DEPLOYMENT'
+                );
+                console.error('🛑 BLOCKING ERRORS - Cannot deploy:', allBlocking);
                 
                 result = {
-                  error: 'Deployment blocked due to critical errors',
+                  error: 'Deployment blocked due to build errors',
                   critical_errors: criticalErrors.map(e => e.message),
+                  blocking_errors: allBlocking.map(e => e.message),
                   stats: checkResult.stats,
-                  recommendation: 'Please fix these security/critical issues before deploying',
+                  recommendation: 'Brainiac attempted self-heal, but some build errors remain. Please review the blocking errors and retry.',
                 };
                 break;
               }

@@ -21,6 +21,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({ status }) => {
         return <FileSearch className="h-5 w-5 text-cyan-500 animate-pulse" />;
       case 'auto_fix':
         return <Wrench className="h-5 w-5 text-yellow-500 animate-pulse" />;
+      case 'self_heal':
+        return <Wrench className="h-5 w-5 text-fuchsia-500 animate-pulse" />;
       case 'security_scan':
         return <Shield className="h-5 w-5 text-purple-500 animate-pulse" />;
       case 'waiting':
@@ -46,6 +48,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({ status }) => {
         return 'Running pre-deployment checks...';
       case 'auto_fix':
         return 'Auto-fixing issues...';
+      case 'self_heal':
+        return 'Self-healing code...';
       case 'security_scan':
         return 'Scanning for vulnerabilities...';
       case 'error_blocked':

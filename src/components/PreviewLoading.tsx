@@ -66,6 +66,12 @@ const stageConfig: Record<string, { icon: React.ReactNode; color: string; bgColo
     bgColor: 'bg-orange-500/10 border-orange-500/20',
     label: 'Waiting' 
   },
+  self_heal: {
+    icon: <Wrench className="w-4 h-4" />,
+    color: 'text-fuchsia-400',
+    bgColor: 'bg-fuchsia-500/10 border-fuchsia-500/20',
+    label: 'Self-Healing',
+  },
   creating_supabase: { 
     icon: <Settings className="w-4 h-4" />, 
     color: 'text-emerald-400', 
