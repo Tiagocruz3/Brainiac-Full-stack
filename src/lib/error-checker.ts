@@ -100,6 +100,15 @@ const INVALID_UNICODE_PATTERN =
 
 const FORBIDDEN_CONTROL_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g;
 
+const HAS_UNICODE_PROPERTY_ESCAPES = (() => {
+  try {
+    void /\p{Cf}/u;
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
 function hasUnicodeFormatChars(code: string): boolean {
   try {
     return /\p{Cf}/u.test(code);
@@ -170,6 +179,56 @@ function hasInvalidUnicodeForTS(code: string): boolean {
   if (hasUnicodeFormatChars(code)) return true;
   if (hasUnpairedSurrogates(code)) return true;
   return false;
+}
+
+function firstInvalidUnicodeSnippet(code: string): { index: number; hex: string; display: string } | null {
+  // Find first control char
+  for (let i = 0; i < code.length; i++) {
+    const cu = code.charCodeAt(i);
+    // Unpaired surrogate detection
+    if (cu >= 0xd800 && cu <= 0xdbff) {
+      const next = i + 1 < code.length ? code.charCodeAt(i + 1) : 0;
+      if (!(next >= 0xdc00 && next <= 0xdfff)) {
+        return { index: i, hex: `U+${cu.toString(16).toUpperCase().padStart(4, '0')}`, display: '\\uD800-DBFF (unpaired high surrogate)' };
+      }
+      i++; // skip valid pair
+      continue;
+    }
+    if (cu >= 0xdc00 && cu <= 0xdfff) {
+      return { index: i, hex: `U+${cu.toString(16).toUpperCase().padStart(4, '0')}`, display: '\\uDC00-DFFF (unpaired low surrogate)' };
+    }
+
+    // C0/C1 controls (except \n \r \t)
+    if ((cu <= 0x1f || (cu >= 0x7f && cu <= 0x9f)) && cu !== 0x0a && cu !== 0x0d && cu !== 0x09) {
+      return { index: i, hex: `U+${cu.toString(16).toUpperCase().padStart(4, '0')}`, display: 'control character' };
+    }
+  }
+
+  // Find first from our static invalid list
+  INVALID_UNICODE_PATTERN.lastIndex = 0;
+  const m = INVALID_UNICODE_PATTERN.exec(code);
+  if (m && typeof m.index === 'number') {
+    const ch = m[0];
+    const cu = ch.charCodeAt(0);
+    return {
+      index: m.index,
+      hex: `U+${cu.toString(16).toUpperCase().padStart(4, '0')}`,
+      display: ch === '\u00A0' ? 'NBSP' : ch === '\uFEFF' ? 'BOM' : ch === '\u200B' ? 'ZERO-WIDTH SPACE' : 'invalid unicode',
+    };
+  }
+
+  // Find any Unicode format char (Cf)
+  if (HAS_UNICODE_PROPERTY_ESCAPES) {
+    for (let i = 0; i < code.length; i++) {
+      const ch = code[i];
+      if (/\p{Cf}/u.test(ch)) {
+        const cu = ch.charCodeAt(0);
+        return { index: i, hex: `U+${cu.toString(16).toUpperCase().padStart(4, '0')}`, display: 'Unicode format char (Cf)' };
+      }
+    }
+  }
+
+  return null;
 }
 
 function sanitizeInvalidUnicode(code: string): string {
@@ -1724,9 +1783,12 @@ export function preCheckCode(code: string, fileName: string): DetectedError[] {
   // it will never be auto-fixed during create/update file writes.
   // ---------------------------------------------------------------------------
   if (hasInvalidUnicodeForTS(code)) {
+    const info = firstInvalidUnicodeSnippet(code);
     errors.push({
       id: 'ts1127-invalid-unicode',
-      message: 'Contains invalid/invisible Unicode characters that can trigger TS1127 (Invalid character)',
+      message: info
+        ? `Contains invalid/invisible Unicode characters (TS1127). First: ${info.hex} (${info.display}) at index ${info.index}`
+        : 'Contains invalid/invisible Unicode characters that can trigger TS1127 (Invalid character)',
       severity: 'error',
       canAutoFix: true,
       action: 'AUTO_FIX',
@@ -1843,6 +1905,21 @@ export function autoFixErrors(code: string, errors: DetectedError[]): {
     } else {
       remainingErrors.push(error);
     }
+  }
+
+  // After auto-fix, re-check TS1127. If it still exists, keep it as remaining
+  // (this prevents Brainiac from deploying a repo that will fail on Vercel).
+  if (hasInvalidUnicodeForTS(fixedCode)) {
+    const info = firstInvalidUnicodeSnippet(fixedCode);
+    remainingErrors.push({
+      id: 'ts1127-invalid-unicode',
+      message: info
+        ? `TS1127 persists after auto-fix. First: ${info.hex} (${info.display}) at index ${info.index}`
+        : 'TS1127 persists after auto-fix (invalid Unicode still present)',
+      severity: 'error',
+      canAutoFix: false,
+      action: 'BLOCK_DEPLOYMENT',
+    });
   }
   
   return { fixedCode, fixedCount, remainingErrors };
