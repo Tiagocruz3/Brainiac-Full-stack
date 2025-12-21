@@ -89,36 +89,97 @@ export type FileSet = Record<string, string>;
 // TS1127 is commonly caused by invisible/control Unicode characters that sneak
 // in via copy/paste (PDFs, web pages, Word, etc). We aggressively normalize the
 // known-bad set while preserving normal non-ASCII content where safe.
-// Includes common troublemakers plus a safety-net removal of Unicode format/control chars.
-// Notably adds:
+// Includes common troublemakers. We intentionally avoid matching *all* surrogates
+// because valid emoji are represented as surrogate pairs and should remain intact.
+//
+// Notably includes:
 // - Bidi controls/isolation chars (U+061C, U+2066–U+2069)
 // - Variation selectors (U+FE00–U+FE0F) which can ride along with emoji
 const INVALID_UNICODE_PATTERN =
   /[\u200B-\u200F\u2028\u2029\u202A-\u202F\u2060\u2066-\u2069\u061C\uFEFF\uFE00-\uFE0F\u00A0\u00AD\u180E\u3000\u2010-\u2015\u2212\u2018\u2019\u201C\u201D\u201A\u201B\u201E\u201F\u2032\u2033\u00AB\u00BB\u2026]|[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g;
 
-function stripUnicodeFormatControlSurrogates(code: string): string {
-  // Try Unicode property escapes (modern browsers). Fallback if unsupported.
+const FORBIDDEN_CONTROL_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g;
+
+function hasUnicodeFormatChars(code: string): boolean {
   try {
-    // Cf = Format, Cc = Control, Cs = Surrogate
-    // Keep normal whitespace controls that are valid in source: \n \r \t
-    return code.replace(/[\p{Cf}\p{Cs}]/gu, '').replace(/[\p{Cc}]/gu, (ch) => {
-      if (ch === '\n' || ch === '\r' || ch === '\t') return ch;
-      return '';
-    });
+    return /\p{Cf}/u.test(code);
   } catch {
-    // Fallback: remove a broad set of known-format controls + any remaining C0/C1 controls
-    return code
-      .replace(/[\u061C\u200B-\u200F\u202A-\u202F\u2060\u2066-\u2069\uFEFF]/g, '')
-      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '');
+    // Best-effort fallback: covers the common Cf troublemakers we already list
+    return /[\u061C\u200B-\u200F\u202A-\u202F\u2060\u2066-\u2069\uFEFF]/.test(code);
   }
 }
 
-function sanitizeInvalidUnicode(code: string): string {
-  if (!INVALID_UNICODE_PATTERN.test(code)) return code;
-  // Reset regex state for global pattern reuse
-  INVALID_UNICODE_PATTERN.lastIndex = 0;
+function removeUnicodeFormatChars(code: string): string {
+  try {
+    return code.replace(/\p{Cf}/gu, '');
+  } catch {
+    return code.replace(/[\u061C\u200B-\u200F\u202A-\u202F\u2060\u2066-\u2069\uFEFF]/g, '');
+  }
+}
 
-  const normalized = code
+function removeUnpairedSurrogates(code: string): string {
+  // Remove only *unpaired* surrogate code units; keep valid emoji pairs.
+  let out = '';
+  for (let i = 0; i < code.length; i++) {
+    const cu = code.charCodeAt(i);
+    // High surrogate
+    if (cu >= 0xd800 && cu <= 0xdbff) {
+      const next = i + 1 < code.length ? code.charCodeAt(i + 1) : 0;
+      if (next >= 0xdc00 && next <= 0xdfff) {
+        // Valid pair: keep both
+        out += code[i] + code[i + 1];
+        i++;
+      } else {
+        // Unpaired high surrogate: drop
+      }
+      continue;
+    }
+    // Low surrogate unpaired
+    if (cu >= 0xdc00 && cu <= 0xdfff) {
+      // Drop unpaired low surrogate
+      continue;
+    }
+    out += code[i];
+  }
+  return out;
+}
+
+function hasUnpairedSurrogates(code: string): boolean {
+  for (let i = 0; i < code.length; i++) {
+    const cu = code.charCodeAt(i);
+    if (cu >= 0xd800 && cu <= 0xdbff) {
+      const next = i + 1 < code.length ? code.charCodeAt(i + 1) : 0;
+      if (!(next >= 0xdc00 && next <= 0xdfff)) return true;
+      i++;
+      continue;
+    }
+    if (cu >= 0xdc00 && cu <= 0xdfff) return true;
+  }
+  return false;
+}
+
+function hasInvalidUnicodeForTS(code: string): boolean {
+  if (FORBIDDEN_CONTROL_PATTERN.test(code)) {
+    FORBIDDEN_CONTROL_PATTERN.lastIndex = 0;
+    return true;
+  }
+  if (INVALID_UNICODE_PATTERN.test(code)) {
+    INVALID_UNICODE_PATTERN.lastIndex = 0;
+    return true;
+  }
+  if (hasUnicodeFormatChars(code)) return true;
+  if (hasUnpairedSurrogates(code)) return true;
+  return false;
+}
+
+function sanitizeInvalidUnicode(code: string): string {
+  if (!hasInvalidUnicodeForTS(code)) return code;
+
+  const normalized = removeUnpairedSurrogates(
+    removeUnicodeFormatChars(code)
+      // Control chars (except \n, \t, \r) -> remove
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '')
+  )
     // Zero-width and direction marks - remove
     .replace(/[\u200B-\u200F]/g, '')
     .replace(/[\u202A-\u202F]/g, '')
@@ -146,13 +207,10 @@ function sanitizeInvalidUnicode(code: string): string {
     .replace(/[\u2010-\u2015\u2212]/g, '-')
 
     // Ellipsis -> three dots
-    .replace(/\u2026/g, '...')
+    .replace(/\u2026/g, '...');
 
-    // Control chars (except \n, \t, \r) -> remove
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '');
-
-  // Safety net: strip any remaining format/control/surrogate chars that can still trigger TS1127
-  return stripUnicodeFormatControlSurrogates(normalized);
+  // One more pass: ensure no forbidden control chars remain
+  return normalized.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '');
 }
 
 // =============================================================================
@@ -1665,9 +1723,7 @@ export function preCheckCode(code: string, fileName: string): DetectedError[] {
   // set of fast heuristics. So we MUST detect TS1127 here explicitly, otherwise
   // it will never be auto-fixed during create/update file writes.
   // ---------------------------------------------------------------------------
-  if (INVALID_UNICODE_PATTERN.test(code)) {
-    // Reset global regex state for reuse
-    INVALID_UNICODE_PATTERN.lastIndex = 0;
+  if (hasInvalidUnicodeForTS(code)) {
     errors.push({
       id: 'ts1127-invalid-unicode',
       message: 'Contains invalid/invisible Unicode characters that can trigger TS1127 (Invalid character)',
